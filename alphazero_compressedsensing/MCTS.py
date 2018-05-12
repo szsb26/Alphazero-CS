@@ -4,7 +4,7 @@ EPS = 1e-8
 
 class MCTS():
     """
-    This class handles the MCTS tree.
+    This class handles the MCTS tree. Note that for each game, a single tree is built. We do not construct new trees for each state/move during a single game.
     """
 
     def __init__(self, game, nnet, args):
@@ -19,7 +19,7 @@ class MCTS():
         self.Ns = {}        # stores #times board s was visited, which is equivalent to sum_b(self.Nsa[(s,b)])
         self.Ps = {}        # stores initial policy (returned by neural net). In our problem, the policy is a vector whose size is equal to #columns of A. 
 
-        self.Es = {}        # stores game.getGameEnded ended for board s
+        self.Es = {}        # stores game.getGameEnded ended for board s. IOW, stores all states and their rewards. 0 if state not terminal, and true reward if state is terminal.
         self.Vs = {}        # stores game.getValidMoves for board s
 
     def getActionProb(self, canonicalBoard, temp=1):
@@ -31,7 +31,7 @@ class MCTS():
             probs: a policy vector where the probability of the ith action is
                    proportional to Nsa[(s,a)]**(1./temp)
         """
-        for i in range(self.args.numMCTSSims): #determines how many simulations of MCTS we run
+        for i in range(self.args.numMCTSSims): #determines how many simulations of MCTS we run for a given board position to determine the next move. 
             self.search(canonicalBoard)
 
         s = self.game.stringRepresentation(canonicalBoard)
@@ -72,10 +72,10 @@ class MCTS():
 		
 		#----------CHECK IF canonicalBoard IS A TERMINAL STATE OR NOT----------
 		#1)self.Es[s] is updated here since s is a terminal state
-        if s not in self.Es: #If s is not a terminal state, then hash the result of current state to 0 if game has not ended. 
-            self.Es[s] = self.game.getGameEnded(canonicalBoard, 1)
-        if self.Es[s]!=0: #otherwise, if s is a terminal state(hash value not zero), then return the end state value(either 1 or -1 depending on player) and exit function
-            return -self.Es[s]
+        if s not in self.Es: #If s is not a terminal state, then hash the reward of s to 0.
+            self.Es[s] = self.game.getGameEnded(canonicalBoard) #game.getGameEnded returns either -sparsity + ||A_Sx-y||_2^2 or 0
+        if self.Es[s]!=0: #otherwise, if s is in self.Es[s] and its reward hash value not zero, then immediately return the end state value and exit function
+            return self.Es[s]
 		#----------------------------------------------------------------------
 		
 		
@@ -87,7 +87,7 @@ class MCTS():
         if s not in self.Ps: #If s is not a key in self.Ps(which hashes s to its next available game states, then s must be a leaf.
             # leaf node
             self.Ps[s], v = self.nnet.predict(canonicalBoard) #neural network takes in position s and returns a prediction(which is p_theta vector and v_theta (numpy vector). Look at own notes)
-            valids = self.game.getValidMoves(canonicalBoard, 1) #returns a numpy vector of 0 and 1's which indicate valid moves from the set of all actions
+            valids = self.game.getValidMoves(canonicalBoard) #returns a numpy vector of 0 and 1's which indicate valid moves from the set of all actions
             self.Ps[s] = self.Ps[s]*valids      # masking(hiding) invalid moves(this inner product creates a vector of probabilities of valid moves)
             sum_Ps_s = np.sum(self.Ps[s])		# probabilities may not add up to 1 anymore after hiding invalid moves(since NN may predict nonzero prob for illegal moves). Hence, renormalize such that
             									# valid actions sum up to 1.
@@ -114,7 +114,7 @@ class MCTS():
         
         valids = self.Vs[s] #retrieve numpy vector of valid moves
         cur_best = -float('inf') #temp variable which holds the current highest UCB value
-        best_act = -1 #temp variable which holds the current best action with largest UCB
+        best_act = -1 #temp variable which holds the current best action with largest UCB. Initialized to -1.
         for a in range(self.game.getActionSize()): #iterate over all possible actions. WHY NOT OVER ALL VALID ACTIONS INSTEAD?
             if valids[a]:
                 if (s,a) in self.Qsa:
@@ -128,8 +128,8 @@ class MCTS():
                     best_act = a
 
         a = best_act #define action with highest UCB computed above as a.
-        next_s, next_player = self.game.getNextState(canonicalBoard, 1, a) #returns next board state(game object) and next player to play (1 or -1).
-        next_s = self.game.getCanonicalForm(next_s, next_player) #canonical form does not matter for one player games. This line may be unnecessary.
+        next_s = self.game.getNextState(canonicalBoard, a) #returns next board state(game object)
+        #next_s = self.game.getCanonicalForm(next_s, next_player) #canonical form does not matter for one player games. This line may be unnecessary.
 
         v = self.search(next_s) #traverse from root to a leaf using recursive search. 
 		
