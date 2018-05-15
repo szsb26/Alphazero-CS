@@ -104,7 +104,7 @@ class MCTS():
 
             self.Vs[s] = valids #Since s is a leaf, store the newly found valid moves and set amount of times s was visited as zero.
             self.Ns[s] = 0
-            return -v
+            return v
 		#--------------------------------------------------------
 		
         
@@ -145,5 +145,5 @@ class MCTS():
             self.Nsa[(s,a)] = 1
 
         self.Ns[s] += 1
-        return -v
+        return v
 		#-------------------------------------------------------------------------------------
