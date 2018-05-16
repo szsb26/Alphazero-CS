@@ -2,17 +2,6 @@ from CS_NNet import NetArch
 import numpy as np
 from keras.models import Model, model_from_json
 
-#dictionary of args for architecture of NN and other parameters
-args = {
-    'lr': 0.001,
-    'num_layers': 2,
-    'neurons_per_layer':100,
-    'epochs': 10,
-    'batch_size': 64,
-    'num_channels': 512,
-    'num_features' : 2,
-}
-
 class NNetWrapper(): 
 	def __init__(self, args, game): #remember that game object stores the matrix A and y
 		self.args = args
@@ -52,20 +41,19 @@ class NNetWrapper():
 		
 		return training_sample
 				
-	def convertStates(self, states):
+	def convertStates(self, states, game):
 	#INPUT: a list of state objects (no labels here)
 	#OUTPUT: a list of 2D arrays, where the row indices of each array indicate the number of training samples,
 	#		and the columns of each array correspond to the values which describe a single feature. Directly fed into NN
 	
 		#Initialize for loop	
 		state = states.pop(0)
-		X = self.statetoFeatures(state)
+		X = self.statetoFeatures(state, game)
+		#Stack each training sample(training sample is a list containing feature vectors as its elements)
 		for state in states:
-			conv_state = self.statetoFeatures(state) #convert every state in states into a training sample recognizable by NN
-			i = 0
-			for training_data in X: #numpy array: 
-				training_data = np.stack([training_data, conv_state[i]])	
-				i += 1
+			conv_state = self.statetoFeatures(state, game) #convert every state in states into a training sample recognizable by NN
+			for i in range(len(X)): #numpy array: 
+				X[i] = np.stack((X[i], conv_state[i]))	
 			
 		return X	
 	
@@ -77,11 +65,11 @@ class NNetWrapper():
 		
 		return Y
 	
-	def train(self, X, Y, filepath): #Take in the final training and labels
+	def train(self, X, Y): #Take in the final training and labels
 	#INPUT: training and labels X,Y respectively
 	#OUTPUT: None
 		
-		history = self.nnet.model.fit(X,Y, epochs = self.args['epochs'], batch_size = self.args['batch_size'])
+		self.nnet.model.fit(X,Y, epochs = self.args['epochs'], batch_size = self.args['batch_size'])
 		
 	def predict(self, conv_state): 
 	#INPUT: Converted state(using statetoFeatures above)
