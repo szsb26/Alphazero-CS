@@ -13,4 +13,6 @@ args = {
     'num_features' : 2,
     #MCTS parameters
     'cpuct': 1, 
+    'numMCTSSims': 25
+    'tempThreshold': 15
 }

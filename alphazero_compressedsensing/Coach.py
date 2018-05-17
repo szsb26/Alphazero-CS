@@ -26,51 +26,53 @@ class Coach():
         self.skipFirstSelfPlay = False # can be overriden in loadTrainExamples()
 
     def executeEpisode(self):
-        """
-        This function executes one episode of self-play, starting with player 1.
-        As the game is played, each turn is added as a training example to
-        trainExamples. The game is played till the game ends. After the game
-        ends, the outcome of the game is used to assign values to each example
-        in trainExamples.
+        #INPUT: None
+        #
+        #OUTPUT: trainExamples, a list of numpy arrays. General form is (X,Y),
+        #where X itself is a list of feature numpy arrays. Each array stores data according to a feature,
+        #and the number of rows in that array is equal to the number of training samples. 
+        #Y is also a 2 element list, where each element is a numpy array. Y[0] is the numpy array for the policy label
+        #while Y[1] is the numpy array for the outcome of the game. Each numpy array in X and Y all have the same number
+        #of rows.
+        #
+        #FUNCTION:We play a single game until we reach a end/terminal state. Each state
+        #is saved and the policy distribution is also saved. When we reach a terminal state,
+        #we propagate the final result z to each state policy pair to get a triple in the form of 
+        #(s_t, pi_t_as, z)
+        
+        state = self.game.getInitBoard() #State Object
+        action_size = self.game.getActionSize()
+        State_List = [] #will convert all states into X using NNet.convertStates
+        trainExamples = []
+        
+		#After episodeStep number of played moves into a single game (>= tempTHreshold), MCTS.getActionProb
+        #starts returning deterministic policies pi. Hence, the action chosen to get the next state
+        #for our root node will be deterministic. The higher the integer tempThreshold is,
+        #the more randomness introduced in generating our training samples before move tempThreshold.
+        
+        episodeStep = 0
+		
+		while True:
+            episodeStep += 1
+            temp = int(episodeStep < self.args.tempThreshold) #int(True) = 1, o.w. 0
+			
+			#Note that MCTS.getActionProb runs a fixed number of MCTS.search determined by 
+			#args.MCTSSims
+            pi = self.mcts.getActionProb(state, temp=temp) 
+			
+			#Construct the States_List and Y
+			States_List.append(state)
+			
+			#choose a random action (integer) with prob in pi.
+            action = np.random.choice(len(pi), p=pi)
+            #Given the randomly generated action, move the root node to the next state.   
+            state = self.game.getNextState(state, action)
 
-        It uses a temp=1 if episodeStep < tempThreshold, and thereafter
-        uses temp=0.
-
-        Returns:
-            trainExamples: a list of examples of the form (canonicalBoard,pi,v)
-                           pi is the MCTS informed policy vector, v is +1 if
-                           the player eventually won the game, else -1.
-        """
-        
-        
-        
-        
-        
-        
-        
-        
-        #trainExamples = []
-        #board = self.game.getInitBoard()
-        #self.curPlayer = 1
-        #episodeStep = 0
-
-        #while True:
-            #episodeStep += 1
-            #canonicalBoard = self.game.getCanonicalForm(board,self.curPlayer)
-            #temp = int(episodeStep < self.args.tempThreshold)
-
-            #pi = self.mcts.getActionProb(canonicalBoard, temp=temp)
-            #sym = self.game.getSymmetries(canonicalBoard, pi)
-            #for b,p in sym:
-                #trainExamples.append([b, self.curPlayer, p, None])
-
-            #action = np.random.choice(len(pi), p=pi)
-            #board, self.curPlayer = self.game.getNextState(board, self.curPlayer, action)
-
-            #r = self.game.getGameEnded(board, self.curPlayer)
-
-            #if r!=0:
-                #return [(x[0],x[2],r*((-1)**(x[1]!=self.curPlayer))) for x in trainExamples]
+            r = self.game.getGameEnded(board, self.curPlayer)
+			
+			#return breaks out of the while loop
+            if r!=0:
+                return [(x[0],x[2],r*((-1)**(x[1]!=self.curPlayer))) for x in trainExamples]
 
     def learn(self):
         """

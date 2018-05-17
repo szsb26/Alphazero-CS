@@ -11,7 +11,6 @@ class MCTS():
         self.game = game    #MCTS stores a a single game(as game object). Look at Game.py. 
         					#The game object stores essential information like valid moves, get next state(which is another game object, etc...
         
-        
         self.nnet = nnet
         self.args = args    # args is a dictionary which contains user specified parameters which determines the complexity of the entire algorithm
         self.Qsa = {}       # stores Q values for s,a (as defined in the paper)
@@ -25,26 +24,34 @@ class MCTS():
     def getActionProb(self, canonicalBoard, temp=1):
         """
         This function performs numMCTSSims simulations of MCTS starting from
-        canonicalBoard.
+        canonicalBoard. We will be using this function to do self play.
 
         Returns:
             probs: a policy vector where the probability of the ith action is
                    proportional to Nsa[(s,a)]**(1./temp)
         """
-        for i in range(self.args.numMCTSSims): #determines how many simulations of MCTS we run for a given board position to determine the next move. 
+        #do numMCTSSims number of MCTS searches/simulations
+        for i in range(self.args.numMCTSSims):  
             self.search(canonicalBoard)
-
+        
+        #Count the number of times an action was taken from the canonicalBoard state as root node
+        #and construct a list of how many times each action was taken
         s = self.game.stringRepresentation(canonicalBoard)
         counts = [self.Nsa[(s,a)] if (s,a) in self.Nsa else 0 for a in range(self.game.getActionSize())]
-
+		
         if temp==0:
+        	#return the index of the list counts with largest value
             bestA = np.argmax(counts)
+            #construct a zero vector with length of counts
             probs = [0]*len(counts)
             probs[bestA]=1
+            #probs is a zero vector with a single 1 in bestA index.
             return probs
-
+        
+		#1./temp is a remnant of Python 2. For ex 1/5 = 0, but 1./5 = 0.2
         counts = [x**(1./temp) for x in counts]
         probs = [x/float(sum(counts)) for x in counts]
+        #returns a probability vector with floating values
         return probs
 
 
