@@ -8,6 +8,22 @@ class NNetWrapper():
 	def __init__(self, args, Game_args): 
 		self.args = args
 		self.nnet = NetArch(args, Game_args) #self.nnet is a NetArch object
+	
+	def constructTraining(states):
+	#INPUT: a list of state objects which have values for self. features, self.p_as, and self.z
+	#OUTPUT: (X,Y) training data saved into .csv file
+		num_states = len(states)
+		temp_X = []
+	
+	#Initialize each element in temp_X as an empty array. For each feature with dimension d, we construct an empty
+	#array of size num_states by d
+	
+		for i in range(num_states):
+			
+	
+		for state in states:
+			nnet_input = state.nn_input
+		pass
 				
 	def train(self, X, Y): #Take in the final training and labels
 	#INPUT: training and labels X,Y respectively
