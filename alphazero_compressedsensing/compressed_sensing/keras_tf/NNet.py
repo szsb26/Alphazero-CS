@@ -9,22 +9,42 @@ class NNetWrapper():
 		self.args = args
 		self.nnet = NetArch(args, Game_args) #self.nnet is a NetArch object
 	
-	def constructTraining(states):
-	#INPUT: a list of state objects which have values for self. features, self.p_as, and self.z
-	#OUTPUT: (X,Y) training data saved into .csv file
+	def constructTraining(states): #this method is used in Coach.py
+	#INPUT: a list of state objects which have values for self.feature_dic, self.p_as, and self.z
+	#OUTPUT: (X,Y) training data saved into .csv file. Ideally for training, we would just directly read in from .csv file if
+	#necessary
+	#NOTE: Do not use state.nn_input, since constructing state.nn_input for each state takes additional time. Training (X,Y)
+	#is directly constructed from state.feature_dic. nn_input should only be used for NNetWrapper.predict. 
 		num_states = len(states)
-		temp_X = []
+		X = []
+		Y = []
+		#Initialize every entry in X as an empty numpy array matrix		
+		list_index = 0
+		for key in states[0].feature_dic: #Each state's feature dictionary should contain vectors which are all the same size
+			X[list_index] = np.empty((num_states,len(states[0].feature_dic[key])))
+			list_index += 1
 	
-	#Initialize each element in temp_X as an empty array. For each feature with dimension d, we construct an empty
-	#array of size num_states by d
-	
-		for i in range(num_states):
-			
-	
-		for state in states:
-			nnet_input = state.nn_input
-		pass
+		#Fill in each empty numpy array in X
+		for i in range(num_states): #iterate over the number of states, which is equal to the row dim of every np array in X.
+			list_index = 0
+			for key in states[i].feature_dic:
+				X[list_index][i][:] = states[i].feature_dic[key] 
+				list_index += 1	
 				
+		#Construct labels Y, which is length 2 list of numpy arrays
+		pi_as_empty = np.empty((num_states, states[0].action_indices.size))
+		z_empty = np.empty((num_states,))
+		Y.append(pi_as_empty)
+		Y.append(z_empty)
+			
+		for i in Y[0].shape[0]: #Y[0].shape equals number of states
+			Y[0][i][:] = states[i].pi_as
+		for i in Y[1].shape[0]:
+			Y[1][i] = states[i].z
+		
+		converted_training = [X, Y]
+		return converted_training
+			
 	def train(self, X, Y): #Take in the final training and labels
 	#INPUT: training and labels X,Y respectively
 	#OUTPUT: None

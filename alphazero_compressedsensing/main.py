@@ -8,7 +8,10 @@ args = {
 	#---------------------------------------------------------------
 	#General Alphazero Parameters
 	'training_samples': 100000, #dictates how many training_samples are generated per iteration of alphazero algorithm
-	'save_into_csv_batch': 1000 #dictates how many training pairs we save at a time into csv file in case of memory overflow
+	'save_into_csv_batch': 1000, #dictates how many training pairs we save at a time into csv file in case of memory overflow
+	'numIters': 1000, #number of alphazero iterations performed. Each iteration consists of 1)playing numEps self play games, 2) retraining neural network
+	'numEps': 100, #dictates how many games are played each iteration of the algorithm
+	'maxlenOfQueue':500,
 	#---------------------------------------------------------------
 	#NN Parameters
     'lr': 0.001,
@@ -23,8 +26,8 @@ args = {
     #---------------------------------------------------------------
     #MCTS parameters
     'cpuct': 1, 
-    'numMCTSSims': 25
-    'tempThreshold': 15
+    'numMCTSSims': 25,
+    'tempThreshold': 15,	#dictates when the MCTS starts returning deterministic polices (vector of 0 and 1's). See Coach.py for more details.
 }
 
 #Game_args is an object, which contains parameters for the underlying sensing matrix A and y.
