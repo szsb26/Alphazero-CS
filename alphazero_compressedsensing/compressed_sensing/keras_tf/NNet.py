@@ -10,7 +10,7 @@ class NNetWrapper():
 		self.nnet = NetArch(args, Game_args) #self.nnet is a NetArch object
 	
 	def constructTraining(states): #this method is used in Coach.py
-	#INPUT: a list of state objects which have values for self.feature_dic, self.p_as, and self.z
+	#INPUT: a list or deque of state objects which have values for self.feature_dic, self.p_as, and self.z
 	#OUTPUT: (X,Y) training data saved into .csv file. Ideally for training, we would just directly read in from .csv file if
 	#necessary
 	#NOTE: Do not use state.nn_input, since constructing state.nn_input for each state takes additional time. Training (X,Y)
@@ -45,9 +45,11 @@ class NNetWrapper():
 		converted_training = [X, Y]
 		return converted_training
 			
-	def train(self, X, Y): #Take in the final training and labels
-	#INPUT: training and labels X,Y respectively
-	#OUTPUT: None
+	def train(self, X, Y): 
+	#INPUT: A list, where each element in the list is itself a list of self play games. 
+	#Each element in this embedded list is in the form [X,Y], which contains all the data for a single
+	#self-pair game. 
+	#OUTPUT: updated class variable self.nnet
 		
 		self.nnet.model.fit(X,Y, epochs = self.args['epochs'], batch_size = self.args['batch_size'])
 		

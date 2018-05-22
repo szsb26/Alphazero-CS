@@ -15,10 +15,10 @@ class Coach():
     """
     def __init__(self, game, nnet, args, Game_args):
         self.game = game
-        self.nnet = nnet
+        self.nnet = nnet	#new neural network
         # the competitor network. SZ: Our competitor network is just another network which plays the same game as another network 
         # and we compare which network picks the sparsest vector. The network which picks the sparsest vector is chosen and we remember these weights.
-        self.pnet = self.nnet.__class__(self.game)											
+        self.pnet = self.nnet.__class__(self.game)	#past neural network								
         self.args = args
         self.game_args = Game_args
         self.mcts = MCTS(self.game, self.nnet, self.args)
@@ -28,9 +28,8 @@ class Coach():
     def executeEpisode(self):
         #INPUT: None
         #
-        #OUTPUT: A list in the form of [X, Y], where X and Y are both lists of numpy arrays.
-        #[X,Y] contains all the new training samples generated from one single game of self-play. 
-        #
+        #OUTPUT: list of state objects, where for every state, state.pi_as, state.z, and state.feature_dic have all been
+        #updated
         #FUNCTION:We play a single game until we reach a end/terminal state. Each state
         #is saved and the policy distribution is also saved. When we reach a terminal state,
         #we propagate the final result z to each state object. In this method, each state object 
@@ -48,18 +47,17 @@ class Coach():
         #the more randomness introduced in generating our training samples before move tempThreshold.
         
         episodeStep = 0
-		
-		while True:
+        
+        while True:
             episodeStep += 1
             temp = int(episodeStep < self.args['tempThreshold']) #int(True) = 1, o.w. 0
 			
 			#Note that MCTS.getActionProb runs a fixed number of MCTS.search determined by 
 			#args.MCTSSims
-            pi = self.mcts.getActionProb(state, temp=temp) 
-			state.pi_as = pi #update the label pi_as
-			#Construct the States_List and Y
-			states.append(state)
-			
+            pi = self.mcts.getActionProb(state, temp=temp)
+            state.pi_as = pi #update the label pi_as
+            #Construct the States_List and Y
+            states.append(state)
 			#choose a random action (integer) with prob in pi.
             action = np.random.choice(len(pi), p=pi)
             #Given the randomly generated action, move the root node to the next state.   
@@ -76,8 +74,8 @@ class Coach():
                 	state.compute_x_S_and_res(self.args, self.game_args)
                 	#compute the label state.z
                 	state.z = r
-                trainExamples = self.nnet.constructTraining(states) #construct a list of length 2 in the form of [X,Y]
-                return trainExamples    
+                trainExamples = states 
+                return trainExamples #returns a list of state objects with features, labels all computed
 
     def learn(self):
         """
@@ -102,7 +100,7 @@ class Coach():
                 #-----------------------------------------------------
                 for eps in range(self.args['numEps']):
                     self.mcts = MCTS(self.game, self.nnet, self.args)   # reset search tree for each game we play
-                    iterationTrainExamples += [self.executeEpisode()] #note that self.executeEpisode() spits out a list in the form of [X,Y]
+                    iterationTrainExamples += self.executeEpisode() #iterationTrainExamples is a deque containing states each generated self play game
                 #-----------------------------------------------------
                     # bookkeeping + plot progress
                     eps_time.update(time.time() - end)
@@ -113,29 +111,35 @@ class Coach():
                 bar.finish()
 
                 # save the iteration examples to the history 
+                #self.trainExamplesHistory is a list of deques, where each deque contains all the states from numEps number of self-play games
                 self.trainExamplesHistory.append(iterationTrainExamples)
                 
-            if len(self.trainExamplesHistory) > self.args.numItersForTrainExamplesHistory:
+            if len(self.trainExamplesHistory) > self.args['numItersForTrainExamplesHistory']:
                 print("len(trainExamplesHistory) =", len(self.trainExamplesHistory), " => remove the oldest trainExamples")
                 self.trainExamplesHistory.pop(0)
-            # backup history to a file
-            # NB! the examples were collected using the model from the previous iteration, so (i-1)  
-            self.saveTrainExamples(i-1)
+            # backup history to a file by calling saveTrainExamples method
+            # The examples were collected using the model from the previous iteration, so (i-1)  
+            self.saveTrainExamples(i-1) #save examples to self.args['checkpoint'] folder with given iteration name of i-1
             
-            # shuffle examlpes before training
+            # shuffle examples before training
+            #trainExamples is the list form of trainExamplesHistory. Note that trainExamplesHistory is a list of deques,
+            #where each deque contains training examples. trainExamples gets rid of the deque, and instead puts all training
+            #samples in a single list, shuffled
             trainExamples = []
-            for e in self.trainExamplesHistory:
+            for e in self.trainExamplesHistory: #Each e is a deque
                 trainExamples.extend(e)
             shuffle(trainExamples)
 
             # training new network, keeping a copy of the old one
-            self.nnet.save_checkpoint(folder=self.args.checkpoint, filename='temp.pth.tar')
-            self.pnet.load_checkpoint(folder=self.args.checkpoint, filename='temp.pth.tar')
-            pmcts = MCTS(self.game, self.pnet, self.args)
+            self.nnet.save_checkpoint(folder=self.args['checkpoint'], filename='temp.pth.tar')
+            self.pnet.load_checkpoint(folder=self.args['checkpoint'], filename='temp.pth.tar')
+            pmcts = MCTS(self.game, self.pnet, self.args) #the old MCTS with old neural net, before training p = previous
             
+            #convert trainExamples into a format recognizable by Neural Network
+            trainExamples = self.nnet.constructTraining(trainExamples)
             self.nnet.train(trainExamples)
-            nmcts = MCTS(self.game, self.nnet, self.args)
-
+            nmcts = MCTS(self.game, self.nnet, self.args) #the new neural network after training n = new
+						
             print('PITTING AGAINST PREVIOUS VERSION')
             arena = Arena(lambda x: np.argmax(pmcts.getActionProb(x, temp=0)),
                           lambda x: np.argmax(nmcts.getActionProb(x, temp=0)), self.game)
@@ -150,11 +154,13 @@ class Coach():
                 self.nnet.save_checkpoint(folder=self.args.checkpoint, filename=self.getCheckpointFile(i))
                 self.nnet.save_checkpoint(folder=self.args.checkpoint, filename='best.pth.tar')                
 
-    def getCheckpointFile(self, iteration):
+    def getCheckpointFile(self, iteration): #return a string which gives information about current checkpoint iteration
+    #and file type (.tar)
         return 'checkpoint_' + str(iteration) + '.pth.tar'
 
-    def saveTrainExamples(self, iteration):
-        folder = self.args.checkpoint
+    def saveTrainExamples(self, iteration): #save training examples (self.trainExamplesHistory to 
+    	#args['checkpoint'] folder with name of self.getCheckpointFile with given iteration. 
+        folder = self.args['checkpoint']
         if not os.path.exists(folder):
             os.makedirs(folder)
         filename = os.path.join(folder, self.getCheckpointFile(iteration)+".examples")
@@ -163,7 +169,7 @@ class Coach():
         f.closed
 
     def loadTrainExamples(self):
-        modelFile = os.path.join(self.args.load_folder_file[0], self.args.load_folder_file[1])
+        modelFile = os.path.join(self.args['load_folder_(folder)'], self.args['load_folder_(filename)'])
         examplesFile = modelFile+".examples"
         if not os.path.isfile(examplesFile):
             print(examplesFile)

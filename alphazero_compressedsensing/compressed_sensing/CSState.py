@@ -30,7 +30,7 @@ class State():
     	
     def compute_x_S_and_res(self, args, Game_args): 
     	#FEATURE 1:
-		if args['x_l2'] == True:
+    	if args['x_l2'] == True:
     		S = self.col_indices #Assume self.col_indices has already been computed from above
     		A_S = Game_args.sensing_matrix[:,S]
     		x = np.linalg.lstsq(A_S, Game_args.obs_vector) #x[0] contains solution, x[1] contains the sum squared residuals, x[2] contains rank, x[3] contains singular values

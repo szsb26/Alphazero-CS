@@ -2,6 +2,7 @@ import sys
 #add arguments of algorithm into system path so that we can import them
 sys.path.insert(0, '/Users/sichenzhong/Desktop/Sichen/Graduate School/ML/NN_MCTS_CS/python src/alphazero_compressedsensing')
 sys.path.insert(0, '/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing/compressed_sensing')
+from Game_Args import Game_args
 
 #args dictionary which dictates behavior of NN, and MCTS
 args = {
@@ -10,8 +11,14 @@ args = {
 	'training_samples': 100000, #dictates how many training_samples are generated per iteration of alphazero algorithm
 	'save_into_csv_batch': 1000, #dictates how many training pairs we save at a time into csv file in case of memory overflow
 	'numIters': 1000, #number of alphazero iterations performed. Each iteration consists of 1)playing numEps self play games, 2) retraining neural network
+	#numEps and maxlenOfQueue controls the size of iterationTrainExamples, which contains all the states(up to maxlenOfQueue) of numEps number of generated self-play games.
 	'numEps': 100, #dictates how many games are played each iteration of the algorithm
-	'maxlenOfQueue':500,
+	'maxlenOfQueue':500, #dictates total number of game states saved(not games). 
+	'numItersForTrainExamplesHistory': 2, #controls the size of trainExamplesHistory, which is a list of different iterationTrainExamples deques. 
+	'checkpoint': '/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing/training_data',
+	'load_folder_(folder)': '/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing/training_data',
+	'load_folder_(filename)': 'best.pth.tar',
+	'arenaCompare': 40,
 	#---------------------------------------------------------------
 	#NN Parameters
     'lr': 0.001,
@@ -21,6 +28,7 @@ args = {
     'batch_size': 64, #dictates the batch_size when training 
     'num_channels': 512,
     'num_features' : 2,
+    #features: True if we wish to use as a feature, False if we do not wish to use as a feature
     'x_l2' : True,		#solution to min_z||A_Sz - y||_2^2, where A_S is the submatrix of columns we have currently chosen
     'lambda' : True,	#the vector of residuals, lambda = A^T(A_Sx-y), where x is the optimal solution to min_z||A_Sz - y||_2^2
     #---------------------------------------------------------------
@@ -33,4 +41,5 @@ args = {
 #Game_args is an object, which contains parameters for the underlying sensing matrix A and y.
 #Game_args is its own object because we may need to generate different A or y for different games.
 #Hence, these functions are contained in Game_args object as class methods. 
+
 Game_args = Game_args()
