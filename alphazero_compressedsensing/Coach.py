@@ -63,7 +63,7 @@ class Coach():
             #Given the randomly generated action, move the root node to the next state.   
             state = self.game.getNextState(state, action)
 
-            r = self.game.getGameEnded(state, self.curPlayer)
+            r = self.game.getGameEnded(state, self.game_args)
 			
 			#return breaks out of the while loop. If r not equal to 0, that means the state we are
 			#on is a terminal state, which implies we should propagate the rewards up to every 
@@ -96,11 +96,14 @@ class Coach():
                 eps_time = AverageMeter()
                 bar = Bar('Self Play', max=self.args['numEps'])
                 end = time.time()
-                #IMPORTANT PART OF THE CODE
+                #IMPORTANT PART OF THE CODE. GENERATE NEW A AND NEW y HERE
                 #-----------------------------------------------------
                 for eps in range(self.args['numEps']):
-                    self.mcts = MCTS(self.game, self.nnet, self.args)   # reset search tree for each game we play
-                    iterationTrainExamples += self.executeEpisode() #iterationTrainExamples is a deque containing states each generated self play game
+                	#Initialize a new game by setting A, x, y, and then execute a single game of self play with self.executeEpisode()
+                	self.game_args.generateSensingMatrix(self.args['m'], self.args['n'], self.args['matrix_type']) #generate a new sensing matrix
+                	self.game_args.generateNewObsVec('x_type')	#generate a new observed vector y
+                    self.mcts = MCTS(self.game, self.nnet, self.args)   #reset search tree for each game we play
+                    iterationTrainExamples += self.executeEpisode() #Play a new game with newly generated y. iterationTrainExamples is a deque containing states each generated self play game
                 #-----------------------------------------------------
                     # bookkeeping + plot progress
                     eps_time.update(time.time() - end)
@@ -135,18 +138,18 @@ class Coach():
             self.pnet.load_checkpoint(folder=self.args['checkpoint'], filename='temp.pth.tar')
             pmcts = MCTS(self.game, self.pnet, self.args) #the old MCTS with old neural net, before training p = previous
             
-            #convert trainExamples into a format recognizable by Neural Network
+            #convert trainExamples into a format recognizable by Neural Network and train
             trainExamples = self.nnet.constructTraining(trainExamples)
             self.nnet.train(trainExamples)
             nmcts = MCTS(self.game, self.nnet, self.args) #the new neural network after training n = new
 						
             print('PITTING AGAINST PREVIOUS VERSION')
             arena = Arena(lambda x: np.argmax(pmcts.getActionProb(x, temp=0)),
-                          lambda x: np.argmax(nmcts.getActionProb(x, temp=0)), self.game)
-            pwins, nwins, draws = arena.playGames(self.args.arenaCompare)
+                          lambda x: np.argmax(nmcts.getActionProb(x, temp=0)), self.game, self.args, self.game_args) #note that Arena will pit pmcts with nmcts, and Game_args A and y will change constantly.
+            pwins, nwins, draws = arena.playGames()
 
             print('NEW/PREV WINS : %d / %d ; DRAWS : %d' % (nwins, pwins, draws))
-            if pwins+nwins > 0 and float(nwins)/(pwins+nwins) < self.args.updateThreshold:
+            if pwins+nwins > 0 and float(nwins)/(pwins+nwins) < self.args['updateThreshold']
                 print('REJECTING NEW MODEL')
                 self.nnet.load_checkpoint(folder=self.args.checkpoint, filename='temp.pth.tar')
             else:

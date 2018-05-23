@@ -6,6 +6,12 @@ from Game_Args import Game_args
 
 #args dictionary which dictates behavior of NN, and MCTS
 args = {
+	#Compressed Sensing Parameters, Ax = y, where A is of size m by n
+	'matrix_type': 'sdnormal',	#type of random matrix
+	'x_type': 'sdnormal',
+	'm': 5,	#row dimension of A
+	'n':15,	#column dimension of A
+	'sparsity':2,
 	#---------------------------------------------------------------
 	#General Alphazero Parameters
 	'training_samples': 100000, #dictates how many training_samples are generated per iteration of alphazero algorithm
@@ -18,7 +24,8 @@ args = {
 	'checkpoint': '/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing/training_data',
 	'load_folder_(folder)': '/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing/training_data',
 	'load_folder_(filename)': 'best.pth.tar',
-	'arenaCompare': 40,
+	'arenaCompare': 40, #number of games played to compare pmcts and nmcts
+	'updateThreshold': 0.6 #determines the percentage of games nmcts must win for us to update pmcts to nmcts
 	#---------------------------------------------------------------
 	#NN Parameters
     'lr': 0.001,
@@ -38,8 +45,3 @@ args = {
     'tempThreshold': 15,	#dictates when the MCTS starts returning deterministic polices (vector of 0 and 1's). See Coach.py for more details.
 }
 
-#Game_args is an object, which contains parameters for the underlying sensing matrix A and y.
-#Game_args is its own object because we may need to generate different A or y for different games.
-#Hence, these functions are contained in Game_args object as class methods. 
-
-Game_args = Game_args()

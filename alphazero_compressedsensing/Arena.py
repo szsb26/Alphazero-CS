@@ -6,7 +6,7 @@ class Arena():
     """
     An Arena class where any 2 agents can be pit against each other.
     """
-    def __init__(self, player1, player2, game, display=None):
+    def __init__(self, player1, player2, game, args, game_args, display=None):
         """
         Input:
             player 1,2: two functions that takes board as input, return action
@@ -14,13 +14,14 @@ class Arena():
             display: a function that takes board as input and prints it (e.g.
                      display in othello/OthelloGame). Is necessary for verbose
                      mode.
-
-        see othello/OthelloPlayers.py for an example. See pit.py for pitting
-        human players/other baselines with each other.
         """
-        self.player1 = player1 #is usually lambda x: np.argmax(pmcts.getActionProb(x, temp=0), an anonymous function. See Coach.py
-        self.player2 = player2 #is usually lambda x: np.argmax(nmcts.getActionProb(x, temp=0), an anonymous function. See Coach.py
+        self.player1 = player1 #is usually lambda x: np.argmax(pmcts.getActionProb(x, temp=0), an anonymous function. self.player1(x) calls the function. Returns the index with largest value. See Coach.py
+        self.player2 = player2 #is usually lambda x: np.argmax(nmcts.getActionProb(x, temp=0), an anonymous function. self.player2(x) calls the function. Returns the index with largest value. See Coach.py
         self.game = game #usually C.game if C is a Coach object. See Coach.py
+        self.game_args = game_args
+        self.args = args
+        self.player1wins = 0
+        self.player2wins = 0
         self.display = display
 
     def playGame(self, verbose=False):
@@ -29,90 +30,79 @@ class Arena():
         neural network gets a reward which is smaller, and we pick the neural network model
         which chose the smallest sparsity.  
 
-        Returns:
-            either
-                winner: player who won the game (1 if player1, -1 if player2)
-            or
-                draw result returned from the game that is neither 1, -1, nor 0.
+        Returns: None
+            self.player1wins += 1 if player 1 wins
+            self.player2wins += 1 if player 2 wins
         """
-        players = [self.player2, None, self.player1]
-        curPlayer = 1
-        board = self.game.getInitBoard()
-        it = 0
-        while self.game.getGameEnded(board, curPlayer)==0:
-            it+=1
-            if verbose:
-                assert(self.display)
-                print("Turn ", str(it), "Player ", str(curPlayer))
-                self.display(board)
-            action = players[curPlayer+1](self.game.getCanonicalForm(board, curPlayer))
-
-            valids = self.game.getValidMoves(self.game.getCanonicalForm(board, curPlayer),1)
-
-            if valids[action]==0:
-                print(action)
-                assert valids[action] >0
-            board, curPlayer = self.game.getNextState(board, curPlayer, action)
+        players = [self.player1, self.player2]
+        end_states = []
+    
+        #2 Games are played. P1 plays one game and P2 plays another game. The winner is the one who chooses has highest reward. 
+        while i in range(2):
+        	state = self.game.getInitBoard(self.game_args) #Initialize the Game
+        	it = 0
+        	while self.game.getGameEnded(state, self.game_args) == 0: #while we are not at a terminal state, continue playing CS game 
+            	it+=1
+            	#OPTIONAL:DO LATER-----------------------------
+            	if verbose: #default at false
+                	assert(self.display)
+                	print("Turn ", str(it))
+                	self.display(board) #display should just be a function which stakes in the state and outputs str(state.action_indices). Do Later...
+            	#----------------------------------------------
+				#Determine the column chosen by player 1
+				action = players[i](state)			
+				
+				#Determine if the chosen moves were valid or not. If not (valid[action]==0, raise exception)
+            	valids = self.game.getValidMoves(state)
+            	if valids[action]==0:
+                	print(action)
+                	assert valids[action]>0
+                
+            	#Get the next state
+            	state = self.game.getNextState(state, action)
+            
+            end_states.append(state) #append the end state of P1 and P2. Note that states in this list already have termreward computed since self.game.getGameEnded was called
+        
+        #Determine whether pmcts or nmcts won. Otherwise, draw game.
+        if end_states[0].termreward > end_states[1].termreward:
+        	self.player1wins += 1
+        
+        elif: end_states[0].termreward < end_states[1].termreward:
+        	self.player2wins += 1
+        	
+        else:
+        	self.player1wins += 1
+        	self.player2wins += 1
+            
+        #OPTIONAL:DO LATER-------------------------------
         if verbose:
             assert(self.display)
-            print("Game over: Turn ", str(it), "Result ", str(self.game.getGameEnded(board, 1)))
+            print("Game over: Turn ", str(it))
+            print('Player 1 wins: ' + str(self.player1wins))
+            print('Player 2 wins: ' + str(self.player2wins))
             self.display(board)
-        return self.game.getGameEnded(board, 1)
+        #------------------------------------------------
+        
+        return None
 
-    def playGames(self, num, verbose=False):
+    def playGames(self, verbose=False):
         """
-        Plays num games in which player1 starts num/2 games and player2 starts
-        num/2 games.
+        Plays num games in which in each game, A and y are re-generated 
 
         Returns:
             oneWon: games won by player1
             twoWon: games won by player2
             draws:  games won by nobody
         """
-        eps_time = AverageMeter()
-        bar = Bar('Arena.playGames', max=num)
-        end = time.time()
-        eps = 0
-        maxeps = int(num)
-
-        num = int(num/2)
-        oneWon = 0
-        twoWon = 0
-        draws = 0
-        for _ in range(num):
-            gameResult = self.playGame(verbose=verbose)
-            if gameResult==1:
-                oneWon+=1
-            elif gameResult==-1:
-                twoWon+=1
-            else:
-                draws+=1
-            # bookkeeping + plot progress
-            eps += 1
-            eps_time.update(time.time() - end)
-            end = time.time()
-            bar.suffix  = '({eps}/{maxeps}) Eps Time: {et:.3f}s | Total: {total:} | ETA: {eta:}'.format(eps=eps+1, maxeps=maxeps, et=eps_time.avg,
-                                                                                                       total=bar.elapsed_td, eta=bar.eta_td)
-            bar.next()
-
-        self.player1, self.player2 = self.player2, self.player1
         
-        for _ in range(num):
-            gameResult = self.playGame(verbose=verbose)
-            if gameResult==-1:
-                oneWon+=1                
-            elif gameResult==1:
-                twoWon+=1
-            else:
-                draws+=1
-            # bookkeeping + plot progress
-            eps += 1
-            eps_time.update(time.time() - end)
-            end = time.time()
-            bar.suffix  = '({eps}/{maxeps}) Eps Time: {et:.3f}s | Total: {total:} | ETA: {eta:}'.format(eps=eps+1, maxeps=num, et=eps_time.avg,
-                                                                                                       total=bar.elapsed_td, eta=bar.eta_td)
-            bar.next()
-            
-        bar.finish()
+        #loop over number of games
+        for i in range(self.args['arenaCompare']):
+        	self.game_args.generateSensingMatrix(self.args['m'], self.args['n'], self.args['matrix_type'])
+        	self.game_args.generateNewObsVec(self.args['x_ty[e'])
+        	self.playGame()
+        	
+        oneWon = self.player1wins
+        twoWon = self.player2wins
+        draws = self.player1wins + self.player2wins - self.args['arenaCompare']
 
         return oneWon, twoWon, draws
