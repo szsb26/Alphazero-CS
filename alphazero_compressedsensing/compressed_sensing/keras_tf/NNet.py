@@ -3,11 +3,9 @@ import numpy as np
 from keras.models import Model, model_from_json
 
 class NNetWrapper(): 
-	#Game_args is an object, while args is just a dictionary found in main.py. When we initialize a 
-	#NNetWrapper object, we specify these two args from main.py and Game_Args.py
-	def __init__(self, args, Game_args): 
+	def __init__(self, args): 
 		self.args = args
-		self.nnet = NetArch(args, Game_args) #self.nnet is a NetArch object
+		self.nnet = NetArch(args) #self.nnet is a NetArch object
 	
 	def constructTraining(states): #this method is used in Coach.py
 	#INPUT: a list or deque of state objects which have values for self.feature_dic, self.p_as, and self.z

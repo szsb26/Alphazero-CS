@@ -42,32 +42,31 @@ class Arena():
         	state = self.game.getInitBoard(self.game_args) #Initialize the Game
         	it = 0
         	while self.game.getGameEnded(state, self.game_args) == 0: #while we are not at a terminal state, continue playing CS game 
-            	it+=1
-            	#OPTIONAL:DO LATER-----------------------------
-            	if verbose: #default at false
-                	assert(self.display)
-                	print("Turn ", str(it))
-                	self.display(board) #display should just be a function which stakes in the state and outputs str(state.action_indices). Do Later...
-            	#----------------------------------------------
-				#Determine the column chosen by player 1
-				action = players[i](state)			
-				
-				#Determine if the chosen moves were valid or not. If not (valid[action]==0, raise exception)
-            	valids = self.game.getValidMoves(state)
-            	if valids[action]==0:
-                	print(action)
-                	assert valids[action]>0
-                
-            	#Get the next state
-            	state = self.game.getNextState(state, action)
-            
-            end_states.append(state) #append the end state of P1 and P2. Note that states in this list already have termreward computed since self.game.getGameEnded was called
+        		it+=1
+        		#OPTIONAL:DO LATER-----------------------------
+        		if verbose: #default at false
+        			assert(self.display)
+        			print("Turn ", str(it))
+        			self.display(board) #display should just be a function which stakes in the state and outputs str(state.action_indices). Do Later...
+        		#----------------------------------------------
+        		#Determine the column chosen by player 1
+        		action = players[i](state)
+        		#Determine if the chosen moves were valid or not. If not (valid[action]==0, raise exception)
+        		valids = self.game.getValidMoves(state)
+        		if valids[action]==0:
+        			print(action)
+        			assert valids[action]>0
+        		
+        		#Get the next state
+        		state = self.game.getNextState(state, action)
+        		
+        	end_states.append(state) #append the end state of P1 and P2. Note that states in this list already have termreward computed since self.game.getGameEnded was called
         
         #Determine whether pmcts or nmcts won. Otherwise, draw game.
         if end_states[0].termreward > end_states[1].termreward:
         	self.player1wins += 1
         
-        elif: end_states[0].termreward < end_states[1].termreward:
+        elif end_states[0].termreward < end_states[1].termreward:
         	self.player2wins += 1
         	
         else:

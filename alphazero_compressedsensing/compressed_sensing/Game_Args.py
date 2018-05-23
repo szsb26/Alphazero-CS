@@ -14,9 +14,9 @@ class Game_args(): #We save the args in Game_args class here because later on we
 		if type == 'uniform01':
 			self.sensing_matrix = np.random.rand(m,n)
 	
-	def generateNewObsVec(entry_type):
-		if self.sensing_matrix == None:
-			return ('Sensing Matrix has not been set!')
+	def generateNewObsVec(self, entry_type):
+		#if self.sensing_matrix == None: #If self.sensing_matrix has already been set, then this comparison throws an error. 
+			#return ('Sensing Matrix has not been set!')
 			
 		x = np.zeros(self.sensing_matrix.shape[1])
 		if entry_type == 'sdnormal':

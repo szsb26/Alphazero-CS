@@ -14,13 +14,13 @@ class Coach():
     in Game and NeuralNet. args are specified in main.py.  Game_args specified in Game_Args.py
     """
     def __init__(self, game, nnet, args, Game_args):
+        self.args = args
         self.game = game
         self.nnet = nnet	#new neural network
         # the competitor network. SZ: Our competitor network is just another network which plays the same game as another network 
         # and we compare which network picks the sparsest vector. The network which picks the sparsest vector is chosen and we remember these weights.
-        self.pnet = self.nnet.__class__(self.game)	#past neural network								
-        self.args = args
-        self.game_args = Game_args
+        self.pnet = self.nnet.__class__(self.args)	#past neural network								
+        self.game_args = Game_args #Game_args object contains information about matrix A and observed vector y
         self.mcts = MCTS(self.game, self.nnet, self.args)
         self.trainExamplesHistory = []    # history of examples from args.numItersForTrainExamplesHistory latest iterations
         self.skipFirstSelfPlay = False # can be overriden in loadTrainExamples()
@@ -36,8 +36,8 @@ class Coach():
         #has state.feature_dic, state.pi_as, and state.z updated. Finally every state in states is
         #converted into a format recognizable by the Neural Network. 
         
-        state = self.game.getInitBoard() #State Object
-        action_size = self.game.getActionSize()
+        state = self.game.getInitBoard(self.args) #State Object
+        action_size = self.game.getActionSize(self.args)
         states = [] #will convert all states into X using NNet.convertStates
         trainExamples = []
         
@@ -53,7 +53,7 @@ class Coach():
             temp = int(episodeStep < self.args['tempThreshold']) #int(True) = 1, o.w. 0
 			
 			#Note that MCTS.getActionProb runs a fixed number of MCTS.search determined by 
-			#args.MCTSSims
+			#args['numMCTSSims']
             pi = self.mcts.getActionProb(state, temp=temp)
             state.pi_as = pi #update the label pi_as
             #Construct the States_List and Y
@@ -76,7 +76,8 @@ class Coach():
                 	state.z = r
                 trainExamples = states 
                 return trainExamples #returns a list of state objects with features, labels all computed
-
+	
+	#learn() IS THE PRIMARY METHOD WHICH STARTS ALPHAZERO!!!
     def learn(self):
         """
         Performs numIters iterations with numEps episodes of self-play in each
@@ -87,7 +88,6 @@ class Coach():
         """
 
         for i in range(1, self.args['numIters']+1):
-            # bookkeeping
             print('------ITER ' + str(i) + '------')
             # examples of the iteration
             if not self.skipFirstSelfPlay or i>1:
@@ -101,16 +101,15 @@ class Coach():
                 for eps in range(self.args['numEps']):
                 	#Initialize a new game by setting A, x, y, and then execute a single game of self play with self.executeEpisode()
                 	self.game_args.generateSensingMatrix(self.args['m'], self.args['n'], self.args['matrix_type']) #generate a new sensing matrix
-                	self.game_args.generateNewObsVec('x_type')	#generate a new observed vector y
-                    self.mcts = MCTS(self.game, self.nnet, self.args)   #reset search tree for each game we play
-                    iterationTrainExamples += self.executeEpisode() #Play a new game with newly generated y. iterationTrainExamples is a deque containing states each generated self play game
+                	self.game_args.generateNewObsVec(self.args['x_type'])#generate a new observed vector y
+                	self.mcts = MCTS(self.game, self.nnet, self.args)#create new search tree for each game we play
+                	iterationTrainExamples += self.executeEpisode() #Play a new game with newly generated y. iterationTrainExamples is a deque containing states each generated self play game
                 #-----------------------------------------------------
-                    # bookkeeping + plot progress
-                    eps_time.update(time.time() - end)
-                    end = time.time()
-                    bar.suffix  = '({eps}/{maxeps}) Eps Time: {et:.3f}s | Total: {total:} | ETA: {eta:}'.format(eps=eps+1, maxeps=self.args.numEps, et=eps_time.avg,
-                                                                                                               total=bar.elapsed_td, eta=bar.eta_td)
-                    bar.next()
+                	# bookkeeping + plot progress
+                	eps_time.update(time.time() - end)
+                	end = time.time()
+                	bar.suffix  = '({eps}/{maxeps}) Eps Time: {et:.3f}s | Total: {total:} | ETA: {eta:}'.format(eps=eps+1, maxeps=self.args.numEps, et=eps_time.avg, total=bar.elapsed_td, eta=bar.eta_td)
+                	bar.next()
                 bar.finish()
 
                 # save the iteration examples to the history 
@@ -149,13 +148,13 @@ class Coach():
             pwins, nwins, draws = arena.playGames()
 
             print('NEW/PREV WINS : %d / %d ; DRAWS : %d' % (nwins, pwins, draws))
-            if pwins+nwins > 0 and float(nwins)/(pwins+nwins) < self.args['updateThreshold']
+            if pwins+nwins > 0 and float(nwins)/(pwins+nwins) < self.args['updateThreshold']:
                 print('REJECTING NEW MODEL')
-                self.nnet.load_checkpoint(folder=self.args.checkpoint, filename='temp.pth.tar')
+                self.nnet.load_checkpoint(folder=self.args['checkpoint'], filename='temp.pth.tar')
             else:
                 print('ACCEPTING NEW MODEL')
-                self.nnet.save_checkpoint(folder=self.args.checkpoint, filename=self.getCheckpointFile(i))
-                self.nnet.save_checkpoint(folder=self.args.checkpoint, filename='best.pth.tar')                
+                self.nnet.save_checkpoint(folder=self.args['checkpoint'], filename=self.getCheckpointFile(i))
+                self.nnet.save_checkpoint(folder=self.args['checkpoint'], filename='best.pth.tar')                
 
     def getCheckpointFile(self, iteration): #return a string which gives information about current checkpoint iteration
     #and file type (.tar)

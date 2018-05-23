@@ -31,7 +31,7 @@ class MCTS():
                    proportional to Nsa[(s,a)]**(1./temp)
         """
         #do numMCTSSims number of MCTS searches/simulations
-        for i in range(self.args.numMCTSSims):  
+        for i in range(self.args['numMCTSSims']):  
             self.search(canonicalBoard)
         
         #Count the number of times an action was taken from the canonicalBoard state as root node
@@ -125,10 +125,10 @@ class MCTS():
         for a in range(self.game.getActionSize()): #iterate over all possible actions. WHY NOT OVER ALL VALID ACTIONS INSTEAD?
             if valids[a]:
                 if (s,a) in self.Qsa:
-                    u = self.Qsa[(s,a)] + self.args.cpuct*self.Ps[s][a]*math.sqrt(self.Ns[s])/(1+self.Nsa[(s,a)]) #note here that self.Ns[s] is number of times s 
+                    u = self.Qsa[(s,a)] + self.args['cpuct']*self.Ps[s][a]*math.sqrt(self.Ns[s])/(1+self.Nsa[(s,a)]) #note here that self.Ns[s] is number of times s 
                     #was visited. Note that self.Ns[s] = sum over b of self.Nsa[(s,b)], so the equation above is equal to surag nair's notes.
                 else:
-                    u = self.args.cpuct*self.Ps[s][a]*math.sqrt(self.Ns[s] + EPS)     # Q = 0 ?
+                    u = self.args['cpuct']*self.Ps[s][a]*math.sqrt(self.Ns[s] + EPS)     # Q = 0 ?
 
                 if u > cur_best:
                     cur_best = u

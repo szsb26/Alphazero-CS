@@ -1,6 +1,6 @@
 import sys
 #add arguments of algorithm into system path so that we can import them
-sys.path.insert(0, '/Users/sichenzhong/Desktop/Sichen/Graduate School/ML/NN_MCTS_CS/python src/alphazero_compressedsensing')
+sys.path.insert(0, '/Users/sichenzhong/Desktop/Sichen/Graduate School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing')
 sys.path.insert(0, '/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing/compressed_sensing')
 from Game_Args import Game_args
 
@@ -25,7 +25,7 @@ args = {
 	'load_folder_(folder)': '/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing/training_data',
 	'load_folder_(filename)': 'best.pth.tar',
 	'arenaCompare': 40, #number of games played to compare pmcts and nmcts
-	'updateThreshold': 0.6 #determines the percentage of games nmcts must win for us to update pmcts to nmcts
+	'updateThreshold': 0.6, #determines the percentage of games nmcts must win for us to update pmcts to nmcts
 	#---------------------------------------------------------------
 	#NN Parameters
     'lr': 0.001,
@@ -45,3 +45,6 @@ args = {
     'tempThreshold': 15,	#dictates when the MCTS starts returning deterministic polices (vector of 0 and 1's). See Coach.py for more details.
 }
 
+#START ALPHAZERO:
+#if __name__=="__main__":
+	#Game_args = Game_args()

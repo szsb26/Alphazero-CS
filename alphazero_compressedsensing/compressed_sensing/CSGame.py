@@ -4,15 +4,14 @@ import numpy as np
 
 class CSGame(): 
 
-    def getInitBoard(self, Game_args): #Game_args is an object
+    def getInitBoard(self, args): #Game_args is an object
     #Get the initial state at beginning of CS Game
-    	col_size = Game_args.sensing_matrix.shape[1] #column size
-    	Initial_State = State(np.zeros(col_size + 1)) #The plus one is for the STOP action.
+    	Initial_State = State(np.zeros(args['n'] + 1)) #The plus one is for the STOP action.
     	return Initial_State
 
-    def getActionSize(self, Game_args): 
+    def getActionSize(self, args): 
     #return number of all actions (equal to column size of A + 1)
-    	return Game_args.sensing_matrix.shape[1]+1 
+    	return args['n']+1 
 
     def getNextState(self, state, action): 
     #input is a State object and an action(integer) which is less than column size of A + 1. 
@@ -30,14 +29,14 @@ class CSGame():
         	#Check if the action taken was a stopping action and construct next state's column indices
         	if action < state.action_indices.size-1: #Note that state.action_indices[state.action_indices.size-1] = stopping action
         		nextstate_col_indices = copy.deepcopy(state.col_indices).append(action)
-        	else:
+        	else: #if stop action was taken, then the next state's taken columns are the same
         		nextstate_col_indices = copy.deepcopy(state.col_indices)
         	
         	next_state = State(nextstate_action_indices, nextstate_col_indices)
         	
         	return next_state 
 
-    def getValidMoves(self, state): 
+    def getValidMoves(self, state): #O(n) operation
     #input is a State object. Output is a binary numpy vector for valid moves,
     #where b[i] = 1 implies ith column can be taken. Total vector size is n+1, where n is number of columns of sensing matrix A
     	valid_moves = np.zeros(state.action_indices.size)
