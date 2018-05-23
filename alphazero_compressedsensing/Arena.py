@@ -97,7 +97,7 @@ class Arena():
         #loop over number of games
         for i in range(self.args['arenaCompare']):
         	self.game_args.generateSensingMatrix(self.args['m'], self.args['n'], self.args['matrix_type'])
-        	self.game_args.generateNewObsVec(self.args['x_ty[e'])
+        	self.game_args.generateNewObsVec(self.args['x_type'], self.args['sparsity'])
         	self.playGame()
         	
         oneWon = self.player1wins

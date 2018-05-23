@@ -11,10 +11,9 @@ args = {
 	'x_type': 'sdnormal',
 	'm': 5,	#row dimension of A
 	'n':15,	#column dimension of A
-	'sparsity':2,
+	'sparsity':5, #dictates the maximum sparsity of x when generating the random vector x. Largest number of nonzeros of x is sparsity-1.
 	#---------------------------------------------------------------
 	#General Alphazero Parameters
-	'training_samples': 100000, #dictates how many training_samples are generated per iteration of alphazero algorithm
 	'save_into_csv_batch': 1000, #dictates how many training pairs we save at a time into csv file in case of memory overflow
 	'numIters': 1000, #number of alphazero iterations performed. Each iteration consists of 1)playing numEps self play games, 2) retraining neural network
 	#numEps and maxlenOfQueue controls the size of iterationTrainExamples, which contains all the states(up to maxlenOfQueue) of numEps number of generated self-play games.
