@@ -28,43 +28,48 @@ class State():
         
         self.col_indices = S
         
-    def compute_x_S_and_res(self, args, Game_args): 
-        #FEATURE 1:
-        if args['x_l2'] == True:
-            S = self.col_indices #Assume self.col_indices has already been computed from above
-            A_S = Game_args.sensing_matrix[:,S]
-            x = np.linalg.lstsq(A_S, Game_args.obs_vector) #x[0] contains solution, x[1] contains the sum squared residuals, x[2] contains rank, x[3] contains singular values
-            opt_sol_l2 = np.zeros(Game_args.sensing_matrix.shape[1])
-            i = 0
-            for k in S:
-                opt_sol_l2[k] = x[0][i]
-                i += 1
+    def compute_x_S_and_res(self, args, Game_args):
+        if S: #if S is nonempty then....
+            #FEATURE 1:
+            if args['x_l2'] == True:
+                S = self.col_indices #Assume self.col_indices has already been computed from above
+                A_S = Game_args.sensing_matrix[:,S]
+                x = np.linalg.lstsq(A_S, Game_args.obs_vector) #x[0] contains solution, x[1] contains the sum squared residuals, x[2] contains rank, x[3] contains singular values
+                opt_sol_l2 = np.zeros(Game_args.sensing_matrix.shape[1])
+                i = 0
+                for k in S:
+                    opt_sol_l2[k] = x[0][i]
+                    i += 1
             
-            self.feature_dic['x_l2']=opt_sol_l2
+                self.feature_dic['x_l2']=opt_sol_l2
             
-        else:
-            print('selected feature set to false in args')
-        
-        #FEATURE 2:
-        if args['lambda'] == True: 
-            if not x[1]: #If the residual x[1] is an empty list [], then A_Sx - y is solved exactly.
-            #WE ASSUME A HAS FULL RANK. Hence, in this case, the residual is a np vector of zeros
-                col_res_IP = np.zeros(Game_args.sensing_matrix[1])
             else:
-                residual_vec = Game_args.obs_vector - np.matmul(A_S, x[0])
-                col_res_IP = np.matmul(Game_args.sensing_matrix.transpose(), residual_vec)
-                col_res_IP = np.absolute(col_res_IP)
+                print('selected feature set to false in args')
         
-            self.feature_dic['col_res_IP'] = col_res_IP
-        else:
-            print('selected feature set to false in args')
+            #FEATURE 2:
+            if args['lambda'] == True: 
+                if not x[1]: #If the residual x[1] is an empty list [], then A_Sx - y is solved exactly.
+                #WE ASSUME A HAS FULL RANK. Hence, in this case, the residual is a np vector of zeros
+                    col_res_IP = np.zeros(Game_args.sensing_matrix[1])
+                else:
+                    residual_vec = Game_args.obs_vector - np.matmul(A_S, x[0])
+                    col_res_IP = np.matmul(Game_args.sensing_matrix.transpose(), residual_vec)
+                    col_res_IP = np.absolute(col_res_IP)
+        
+                self.feature_dic['col_res_IP'] = col_res_IP
+            else:
+                print('selected feature set to false in args')
+        
+        else: #if S is empty then...
+            self.feature_dic['x_l2'] = np.zeros(np.zeros(Game_args.sensing_matrix.shape[1])
+            self.feature_dic['col_res_IP'] = np.matmul(Game_args.sensing_matrix.transpose(), Game_args.obs_vector)
         
     def computeTermReward(self, args, Game_args):
     
         S = self.col_indices #note that when we compute the termreward for initial state, THIS WILL RETURN AN ERROR because col_indices of initial state is []
         
         if not S: #If S = [], then not S returns True. Also, if S = [], then we are at the initial state, and the residual is just the magnitude of y (Game_args.obs_vector)**2
-            self.termreward = np.linalg.norm(Game_args.obs_vector)**2 
+            self.termreward = -np.linalg.norm(Game_args.obs_vector)**2 
             return
             
         A_S = Game_args.sensing_matrix[:,S]

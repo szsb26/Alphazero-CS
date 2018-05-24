@@ -27,13 +27,12 @@ args = {
     'updateThreshold': 0.6, #determines the percentage of games nmcts must win for us to update pmcts to nmcts
     #---------------------------------------------------------------
     #NN Parameters
-    'lr': 0.001,
-    'num_layers': 2,
-    'neurons_per_layer':100,
-    'epochs': 10,
+    'lr': 0.001,    #learning rate of NN
+    'num_layers': 2,    #number of hidden layers after the 1st hidden layer
+    'neurons_per_layer':100,    #number of neurons per hidden layer
+    'epochs': 10,   #number of training epochs
     'batch_size': 64, #dictates the batch_size when training 
-    'num_channels': 512,
-    'num_features' : 2,
+    'num_features' : 2, #number of self-designed features used in the input
     #features: True if we wish to use as a feature, False if we do not wish to use as a feature
     'x_l2' : True,      #solution to min_z||A_Sz - y||_2^2, where A_S is the submatrix of columns we have currently chosen
     'lambda' : True,    #the vector of residuals, lambda = A^T(A_Sx-y), where x is the optimal solution to min_z||A_Sz - y||_2^2
