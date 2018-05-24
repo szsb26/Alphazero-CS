@@ -39,39 +39,39 @@ class Arena():
     
         #2 Games are played. P1 plays one game and P2 plays another game. The winner is the one who chooses has highest reward. 
         while i in range(2):
-        	state = self.game.getInitBoard(self.game_args) #Initialize the Game
-        	it = 0
-        	while self.game.getGameEnded(state, self.game_args) == 0: #while we are not at a terminal state, continue playing CS game 
-        		it+=1
-        		#OPTIONAL:DO LATER-----------------------------
-        		if verbose: #default at false
-        			assert(self.display)
-        			print("Turn ", str(it))
-        			self.display(board) #display should just be a function which stakes in the state and outputs str(state.action_indices). Do Later...
-        		#----------------------------------------------
-        		#Determine the column chosen by player 1
-        		action = players[i](state)
-        		#Determine if the chosen moves were valid or not. If not (valid[action]==0, raise exception)
-        		valids = self.game.getValidMoves(state)
-        		if valids[action]==0:
-        			print(action)
-        			assert valids[action]>0
-        		
-        		#Get the next state
-        		state = self.game.getNextState(state, action)
-        		
-        	end_states.append(state) #append the end state of P1 and P2. Note that states in this list already have termreward computed since self.game.getGameEnded was called
+            state = self.game.getInitBoard(self.game_args) #Initialize the Game
+            it = 0
+            while self.game.getGameEnded(state, self.args, self.game_args) == 0: #while we are not at a terminal state, continue playing CS game 
+                it+=1
+                #OPTIONAL:DO LATER-----------------------------
+                if verbose: #default at false
+                    assert(self.display)
+                    print("Turn ", str(it))
+                    self.display(board) #display should just be a function which stakes in the state and outputs str(state.action_indices). Do Later...
+                #----------------------------------------------
+                #Determine the column chosen by player 1
+                action = players[i](state)
+                #Determine if the chosen moves were valid or not. If not (valid[action]==0, raise exception)
+                valids = self.game.getValidMoves(state)
+                if valids[action]==0:
+                    print(action)
+                    assert valids[action]>0
+                
+                #Get the next state
+                state = self.game.getNextState(state, action)
+                
+            end_states.append(state) #append the end state of P1 and P2. Note that states in this list already have termreward computed since self.game.getGameEnded was called
         
         #Determine whether pmcts or nmcts won. Otherwise, draw game.
         if end_states[0].termreward > end_states[1].termreward:
-        	self.player1wins += 1
+            self.player1wins += 1
         
         elif end_states[0].termreward < end_states[1].termreward:
-        	self.player2wins += 1
-        	
+            self.player2wins += 1
+            
         else:
-        	self.player1wins += 1
-        	self.player2wins += 1
+            self.player1wins += 1
+            self.player2wins += 1
             
         #OPTIONAL:DO LATER-------------------------------
         if verbose:
@@ -96,10 +96,10 @@ class Arena():
         
         #loop over number of games
         for i in range(self.args['arenaCompare']):
-        	self.game_args.generateSensingMatrix(self.args['m'], self.args['n'], self.args['matrix_type'])
-        	self.game_args.generateNewObsVec(self.args['x_type'], self.args['sparsity'])
-        	self.playGame()
-        	
+            self.game_args.generateSensingMatrix(self.args['m'], self.args['n'], self.args['matrix_type'])
+            self.game_args.generateNewObsVec(self.args['x_type'], self.args['sparsity'])
+            self.playGame()
+            
         oneWon = self.player1wins
         twoWon = self.player2wins
         draws = self.player1wins + self.player2wins - self.args['arenaCompare']

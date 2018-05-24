@@ -15,13 +15,13 @@ class Coach():
     """
     def __init__(self, game, nnet, args, Game_args):
         self.args = args
+        self.game_args = Game_args #Game_args object contains information about matrix A and observed vector y
         self.game = game
-        self.nnet = nnet	#new neural network
+        self.nnet = nnet    #new neural network
         # the competitor network. SZ: Our competitor network is just another network which plays the same game as another network 
         # and we compare which network picks the sparsest vector. The network which picks the sparsest vector is chosen and we remember these weights.
-        self.pnet = self.nnet.__class__(self.args)	#past neural network								
-        self.game_args = Game_args #Game_args object contains information about matrix A and observed vector y
-        self.mcts = MCTS(self.game, self.nnet, self.args)
+        self.pnet = self.nnet.__class__(self.args)  #past neural network                                
+        self.mcts = MCTS(self.game, self.nnet, self.args, self.game_args)
         self.trainExamplesHistory = []    # history of examples from args.numItersForTrainExamplesHistory latest iterations
         self.skipFirstSelfPlay = False # can be overriden in loadTrainExamples()
 
@@ -41,7 +41,7 @@ class Coach():
         states = [] #will convert all states into X using NNet.convertStates
         trainExamples = []
         
-		#After episodeStep number of played moves into a single game (>= tempTHreshold), MCTS.getActionProb
+        #After episodeStep number of played moves into a single game (>= tempTHreshold), MCTS.getActionProb
         #starts returning deterministic policies pi. Hence, the action chosen to get the next state
         #for our root node will be deterministic. The higher the integer tempThreshold is,
         #the more randomness introduced in generating our training samples before move tempThreshold.
@@ -51,33 +51,33 @@ class Coach():
         while True: #construct a list of states objects, where each state has state.p_as, state.z, and state.feature_dic updated. These are needed for conversion into training samples in NNetWrapper.constructTraining
             episodeStep += 1
             temp = int(episodeStep < self.args['tempThreshold']) #int(True) = 1, o.w. 0
-			
-			#Note that MCTS.getActionProb runs a fixed number of MCTS.search determined by 
-			#args['numMCTSSims']
+            
+            #Note that MCTS.getActionProb runs a fixed number of MCTS.search determined by 
+            #args['numMCTSSims']
             pi = self.mcts.getActionProb(state, temp=temp)
             state.pi_as = pi #update the label pi_as
             #Construct the States_List and Y
             states.append(state)
-			#choose a random action (integer) with prob in pi.
+            #choose a random action (integer) with prob in pi.
             action = np.random.choice(len(pi), p=pi)
             #Given the randomly generated action, move the root node to the next state.   
             state = self.game.getNextState(state, action)
 
             r = self.game.getGameEnded(state, self.game_args)
-			
-			#return breaks out of the while loop. If r not equal to 0, that means the state we are
-			#on is a terminal state, which implies we should propagate the rewards up to every 
-			#state in states
+            
+            #return breaks out of the while loop. If r not equal to 0, that means the state we are
+            #on is a terminal state, which implies we should propagate the rewards up to every 
+            #state in states
             if r!=0:
                 for state in states:
-                	#compute state.feature_dic
-                	state.compute_x_S_and_res(self.args, self.game_args)
-                	#compute the label state.z
-                	state.z = r
+                    #compute state.feature_dic
+                    state.compute_x_S_and_res(self.args, self.game_args)
+                    #compute the label state.z
+                    state.z = r
                 trainExamples = states 
                 return trainExamples #returns a list of state objects with features, labels all computed
-	
-	#learn() IS THE PRIMARY METHOD WHICH STARTS ALPHAZERO!!!
+    
+    #learn() IS THE PRIMARY METHOD WHICH STARTS ALPHAZERO!!!
     def learn(self):
         """
         Performs numIters iterations with numEps episodes of self-play in each
@@ -101,17 +101,17 @@ class Coach():
                 #IMPORTANT PART OF THE CODE. GENERATE NEW A AND NEW y HERE. EACH SELF-PLAY GAME HAS DIFFERENT A AND y. 
                 #-----------------------------------------------------
                 for eps in range(self.args['numEps']):
-                	#Initialize a new game by setting A, x, y, and then execute a single game of self play with self.executeEpisode()
-                	self.game_args.generateSensingMatrix(self.args['m'], self.args['n'], self.args['matrix_type']) #generate a new sensing matrix
-                	self.game_args.generateNewObsVec(self.args['x_type'], self.args['sparsity'])#generate a new observed vector y
-                	self.mcts = MCTS(self.game, self.nnet, self.args)#create new search tree for each game we play
-                	iterationTrainExamples += self.executeEpisode() #Play a new game with newly generated y. iterationTrainExamples is a deque containing states each generated self play game
+                    #Initialize a new game by setting A, x, y, and then execute a single game of self play with self.executeEpisode()
+                    self.game_args.generateSensingMatrix(self.args['m'], self.args['n'], self.args['matrix_type']) #generate a new sensing matrix
+                    self.game_args.generateNewObsVec(self.args['x_type'], self.args['sparsity'])#generate a new observed vector y
+                    self.mcts = MCTS(self.game, self.nnet, self.args, self.game_args)#create new search tree for each game we play
+                    iterationTrainExamples += self.executeEpisode() #Play a new game with newly generated y. iterationTrainExamples is a deque containing states each generated self play game
                 #-----------------------------------------------------
-                	# bookkeeping + plot progress
-                	eps_time.update(time.time() - end)
-                	end = time.time()
-                	bar.suffix  = '({eps}/{maxeps}) Eps Time: {et:.3f}s | Total: {total:} | ETA: {eta:}'.format(eps=eps+1, maxeps=self.args.numEps, et=eps_time.avg, total=bar.elapsed_td, eta=bar.eta_td)
-                	bar.next()
+                    # bookkeeping + plot progress
+                    eps_time.update(time.time() - end)
+                    end = time.time()
+                    bar.suffix  = '({eps}/{maxeps}) Eps Time: {et:.3f}s | Total: {total:} | ETA: {eta:}'.format(eps=eps+1, maxeps=self.args.numEps, et=eps_time.avg, total=bar.elapsed_td, eta=bar.eta_td)
+                    bar.next()
                 bar.finish()
 
                 # save the iteration examples to the history 
@@ -137,13 +137,13 @@ class Coach():
             # training new network, keeping a copy of the old one
             self.nnet.save_checkpoint(folder=self.args['checkpoint'], filename='temp.pth.tar')
             self.pnet.load_checkpoint(folder=self.args['checkpoint'], filename='temp.pth.tar')
-            pmcts = MCTS(self.game, self.pnet, self.args) #the old MCTS with old neural net, before training p = previous
+            pmcts = MCTS(self.game, self.pnet, self.args, self.game_args) #the old MCTS with old neural net, before training p = previous
             
             #convert trainExamples into a format recognizable by Neural Network and train
             trainExamples = self.nnet.constructTraining(trainExamples)
             self.nnet.train(trainExamples)
-            nmcts = MCTS(self.game, self.nnet, self.args) #the new neural network after training n = new
-						
+            nmcts = MCTS(self.game, self.nnet, self.args, self.game_args) #the new neural network after training n = new
+                        
             print('PITTING AGAINST PREVIOUS VERSION')
             arena = Arena(lambda x: np.argmax(pmcts.getActionProb(x, temp=0)),
                           lambda x: np.argmax(nmcts.getActionProb(x, temp=0)), self.game, self.args, self.game_args) #note that Arena will pit pmcts with nmcts, and Game_args A and y will change constantly.
@@ -163,7 +163,7 @@ class Coach():
         return 'checkpoint_' + str(iteration) + '.pth.tar'
 
     def saveTrainExamples(self, iteration): #save training examples (self.trainExamplesHistory to 
-    	#args['checkpoint'] folder with name of self.getCheckpointFile with given iteration. 
+        #args['checkpoint'] folder with name of self.getCheckpointFile with given iteration. 
         folder = self.args['checkpoint']
         if not os.path.exists(folder):
             os.makedirs(folder)
@@ -190,4 +190,4 @@ class Coach():
 
 
 
-	
+    
