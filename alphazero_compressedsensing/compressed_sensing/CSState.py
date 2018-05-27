@@ -19,7 +19,7 @@ class State():
         self.z = None
         #NN_input format for prediction(dont need labels for states we wish to predict)
         self.nn_input = None
-    
+        
     def computecolStats(self): #O(n) operation, where n is the length of the list
         S = []
         for i in range(self.action_indices.size-1):
@@ -28,11 +28,11 @@ class State():
         
         self.col_indices = S
         
-    def compute_x_S_and_res(self, args, Game_args):
-        if S: #if S is nonempty then....
+    def compute_x_S_and_res(self, args, Game_args): #compute feature vectors for feeding into NN
+        if self.col_indices: #If self.col_indices is not an empty list(meaning that we are not at the start state in which we have not chosen any columns)
             #FEATURE 1:
             if args['x_l2'] == True:
-                S = self.col_indices #Assume self.col_indices has already been computed from above
+                S = self.col_indices #Assume self.col_indices has already been computed from MCTS state creation.
                 A_S = Game_args.sensing_matrix[:,S]
                 x = np.linalg.lstsq(A_S, Game_args.obs_vector) #x[0] contains solution, x[1] contains the sum squared residuals, x[2] contains rank, x[3] contains singular values
                 opt_sol_l2 = np.zeros(Game_args.sensing_matrix.shape[1])
@@ -45,7 +45,6 @@ class State():
             
             else:
                 print('selected feature set to false in args')
-        
             #FEATURE 2:
             if args['lambda'] == True: 
                 if not x[1]: #If the residual x[1] is an empty list [], then A_Sx - y is solved exactly.
@@ -57,36 +56,34 @@ class State():
                     col_res_IP = np.absolute(col_res_IP)
         
                 self.feature_dic['col_res_IP'] = col_res_IP
-            else:
+            else:               
                 print('selected feature set to false in args')
-        
-        else: #if S is empty then...
-            self.feature_dic['x_l2'] = np.zeros(np.zeros(Game_args.sensing_matrix.shape[1])
+        else: #If column indices is empty, this means we have not chosen any columns
+            self.feature_dic['x_l2'] = np.zeros(Game_args.sensing_matrix.shape[1])
             self.feature_dic['col_res_IP'] = np.matmul(Game_args.sensing_matrix.transpose(), Game_args.obs_vector)
         
-    def computeTermReward(self, args, Game_args):
-    
-        S = self.col_indices #note that when we compute the termreward for initial state, THIS WILL RETURN AN ERROR because col_indices of initial state is []
+    def computeTermReward(self, args, Game_args): #determine whether terminal state conditions are met. If any of the terminal state conditions are met, return terminal value, which is negative
+        if self.col_indices: #If self.col_indices is not an empty list
+            S = self.col_indices #note that when we compute the termreward for initial state, THIS WILL RETURN AN ERROR because col_indices of initial state is []   
+            A_S = Game_args.sensing_matrix[:,S]
+            x = np.linalg.lstsq(A_S, Game_args.obs_vector)
         
-        if not S: #If S = [], then not S returns True. Also, if S = [], then we are at the initial state, and the residual is just the magnitude of y (Game_args.obs_vector)**2
-            self.termreward = -np.linalg.norm(Game_args.obs_vector)**2 
-            return
+            if not x[1]: #Case in which residual returns an empty size 1 array, which implies state.num_col = number of rows of sensing matrix
+                self.termreward = - len(self.col_indices)
+            elif len(self.col_indices) == Game_args.game_iter or self.action_indices[-1] == 1 or x[1] < args['epsilon']:
+                self.termreward = - len(self.col_indices) - args['gamma']*x[1]
+            else:
+                self.termreward = 0 #not terminal state
+        else: #If self.col_indices is an empty list, that means we have not chosen any columns, so we are definitely not at a terminal node. Set self.termreward to 0.
+            self.termreward = 0
             
-        A_S = Game_args.sensing_matrix[:,S]
-        x = np.linalg.lstsq(A_S, Game_args.obs_vector)
-        
-        if not x[1]: #Case in which residual returns an empty size 1 array, which implies state.num_col = number of rows of sensing matrix
-            self.termreward = - len(self.col_indices)
-        elif len(self.col_indices) == Game_args.game_iter or self.action_indices[-1] == 1 or x[1] < args['epsilon']:
-            self.termreward = - len(self.col_indices) - args['gamma']*x[1]
-        else:
-            self.termreward = 0 #not terminal state
     
-    def converttoNNInput(self): #convert data in features dictionary into format recognizable by NN for prediction
+    def converttoNNInput(self): #convert data in features dictionary into format recognizable by NN for prediction. This method is used in MCTS search method, where we output the p_as and z for searching for the next node to go to and backpropagating the reward. 
         
         NN_input_X = []
         for key in self.feature_dic:
-            self.feature_dic[key] = feature_data
+            feature_data = self.feature_dic[key]
+            feature_data = np.reshape(feature_data, (1, feature_data.size)) #reshape to (1, feature_data.size) for single predictions. Must be of this form for model.predict
             NN_input_X.append(feature_data)
         
         self.nn_input = NN_input_X

@@ -18,10 +18,10 @@ class NetArch():
         HL1 = []
         #Depending on which features are given in args, create the input size of NN
         if self.args['x_l2']:
-            xl2_input1 = Input(shape = (self.args['n'],)) #corresponds to a combination of feature a and b (pg 78)
+            xl2_input1 = Input(shape = (self.args['n'],)) #corresponds to a combination of feature a and b (pg 78), tensor object
             Inputs.append(xl2_input1)
         if self.args['lambda']:
-            colresIP_input2 = Input(shape = (self.args['n'],)) #corresponds to feature b1 in notes  (pg 78)
+            colresIP_input2 = Input(shape = (self.args['n'],)) #corresponds to feature b1 in notes  (pg 78), tensor object
             Inputs.append(colresIP_input2)
         
         

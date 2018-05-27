@@ -56,8 +56,12 @@ class NNetWrapper():
     #must all be computed before NNetWrapper.predict can make a meaningful prediction. 
     #OUTPUT: p_as and v
         
-        p_as, v = self.nnet.model.predict(state.nn_input)   
-        return p_as, v
+        if state.nn_input == None:
+            print('nn_input of input state has not been computed')
+            return
+        else: 
+            p_as, v = self.nnet.model.predict(state.nn_input)   
+            return p_as, v
     
     def save_checkpoint(self, folder, filename):
     #INPUT: folder and filename 

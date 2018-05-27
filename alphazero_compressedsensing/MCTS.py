@@ -25,16 +25,16 @@ class MCTS():
     def getActionProb(self, canonicalBoard, temp=1):
         """
         This function performs numMCTSSims simulations of MCTS starting from
-        canonicalBoard. We will be using this function to do self play.
+        canonicalBoard. We will be using this function to do self play. Uses search method below
 
         Returns:
             probs: a policy vector where the probability of the ith action is
                    proportional to Nsa[(s,a)]**(1./temp)
         """
         #do numMCTSSims number of MCTS searches/simulations
-        print(self.game_args.sensing_matrix)
-        print(self.game_args.obs_vector)
-        print(canonicalBoard.action_indices)
+        #print(self.game_args.sensing_matrix)
+        #print(self.game_args.obs_vector)
+        #print(canonicalBoard.action_indices)
         for i in range(self.args['numMCTSSims']):  
             self.search(canonicalBoard)
         
@@ -83,9 +83,9 @@ class MCTS():
         
         #----------CHECK IF canonicalBoard IS A TERMINAL STATE OR NOT----------
         #1)self.Es[s] is updated here since s is a terminal state
-        if s not in self.Es: #if s is not in self.Es
-            self.Es[s] = self.game.getGameEnded(canonicalBoard, self.args, self.game_args) #game.getGameEnded returns either -sparsity + ||A_Sx-y||_2^2 or 0
-        if self.Es[s]!=0: #otherwise, if s is in self.Es[s] and its reward hash value not zero, then immediately return the end state value and exit function
+        if s not in self.Es: #if s is not in self.Es, hash s into Es and determine whether s is a terminal state or not. 
+            self.Es[s] = self.game.getGameEnded(canonicalBoard, self.args, self.game_args) #game.getGameEnded returns either -sparsity + ||A_Sx-y||_2^2 or 0. Note that once getGameEnded is called, canonicalBoard.termreward is set.
+        if self.Es[s]!=0: #Now that we have hashed s into self.Es, check whether the reward returned above is 0 or not. If not zero, return the computed terminal value from getGameEnded above and search stops.
             return self.Es[s]
         #----------------------------------------------------------------------
         
@@ -96,6 +96,12 @@ class MCTS():
         #4)self.Ps[s], self.Vs[s], and self.Ns[s] are all initialized.
         if s not in self.Ps: #If s is not a key in self.Ps(which hashes s to its next available game states, then s must be a leaf.
             # leaf node
+            #Prepare canonicalBoard for feeding into NN
+            
+            #COMPUTE self.feature_dic and compute NN representation
+            canonicalBoard.compute_x_S_and_res(self.args, self.game_args)
+            canonicalBoard.converttoNNInput()
+                        
             self.Ps[s], v = self.nnet.predict(canonicalBoard) #neural network takes in position s and returns a prediction(which is p_theta vector and v_theta (numpy vector). Look at own notes)
             valids = self.game.getValidMoves(canonicalBoard) #returns a numpy vector of 0 and 1's which indicate valid moves from the set of all actions
             self.Ps[s] = self.Ps[s]*valids      # masking(hiding) invalid moves(this inner product creates a vector of probabilities of valid moves)
@@ -120,17 +126,19 @@ class MCTS():
         #-----------IF CURRENT NODE s IS NOT A LEAF, THEN CONTINUE SEARCH------------------------
         #1)search from a root to a leaf via UCB using recursive search
         #2)Once we arrive at a leaf, due to the recursive nature, we update self.Qsa and self.Nsa dictionaries in a bottom up fashion. 
+        #3)Note that if s is not a leaf, it has been a leaf before, so self.Vs[s], self.Ps[s], self.Ns[s] are all well defined.
         
         valids = self.Vs[s] #retrieve numpy vector of valid moves
         cur_best = -float('inf') #temp variable which holds the current highest UCB value
         best_act = -1 #temp variable which holds the current best action with largest UCB. Initialized to -1.
-        for a in range(self.game.getActionSize()): #iterate over all possible actions. WHY NOT OVER ALL VALID ACTIONS INSTEAD?
+        for a in range(self.game.getActionSize(self.args)): #iterate over all possible actions. WHY NOT OVER ALL VALID ACTIONS INSTEAD?
             if valids[a]:
                 if (s,a) in self.Qsa:
                     u = self.Qsa[(s,a)] + self.args['cpuct']*self.Ps[s][a]*math.sqrt(self.Ns[s])/(1+self.Nsa[(s,a)]) #note here that self.Ns[s] is number of times s 
                     #was visited. Note that self.Ns[s] = sum over b of self.Nsa[(s,b)], so the equation above is equal to surag nair's notes.
                 else:
                     u = self.args['cpuct']*self.Ps[s][a]*math.sqrt(self.Ns[s] + EPS)     # Q = 0 ?
+                    print(u)
 
                 if u > cur_best: #because this is equivalent to taking the max, this is why our rewards are negative!!!!!
                     cur_best = u

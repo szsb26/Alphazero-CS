@@ -4,8 +4,8 @@ import numpy as np
 
 class CSGame(): 
 
-    def getInitBoard(self, args): #Game_args is an object
-    #Get the initial state at beginning of CS Game
+    def getInitBoard(self, args, Game_args): #Game_args is an object
+    #Get the initial state at beginning of CS Game and compute its features and terminal reward
         Initial_State = State(np.zeros(args['n'] + 1)) #The plus one is for the STOP action.
         return Initial_State
 
