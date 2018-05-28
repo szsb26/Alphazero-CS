@@ -24,7 +24,7 @@ class MCTS():
 
     def getActionProb(self, canonicalBoard, temp=1):
         """
-        This function performs numMCTSSims simulations of MCTS starting from
+        This function performs numMCTSSims simulations of MCTS(expands tree numMCTSSims times) starting from
         canonicalBoard. We will be using this function to do self play. Uses search method below
 
         Returns:
@@ -36,6 +36,7 @@ class MCTS():
         #print(self.game_args.obs_vector)
         #print(canonicalBoard.action_indices)
         for i in range(self.args['numMCTSSims']):  
+            print(i)
             self.search(canonicalBoard)
         
         #Count the number of times an action was taken from the canonicalBoard state as root node
@@ -83,6 +84,9 @@ class MCTS():
         
         #----------CHECK IF canonicalBoard IS A TERMINAL STATE OR NOT----------
         #1)self.Es[s] is updated here since s is a terminal state
+        #2)Note that terminal states are NOT expanded, so it is conceivable that MCTS search may search the same terminal node more than once. However,  
+        #as the number of visits increases, the UCB for every action taken up to that terminal node will decrease(Nsa increases, where s is the node leading up to terminal node, so UCB decreases).
+        #Since UCB decreases, this allows exploration of other actions. 
         if s not in self.Es: #if s is not in self.Es, hash s into Es and determine whether s is a terminal state or not. 
             self.Es[s] = self.game.getGameEnded(canonicalBoard, self.args, self.game_args) #game.getGameEnded returns either -sparsity + ||A_Sx-y||_2^2 or 0. Note that once getGameEnded is called, canonicalBoard.termreward is set.
         if self.Es[s]!=0: #Now that we have hashed s into self.Es, check whether the reward returned above is 0 or not. If not zero, return the computed terminal value from getGameEnded above and search stops.
@@ -92,7 +96,7 @@ class MCTS():
         #-------------IF s IS A LEAF, THEN:---------------------
         #1)Call neural network to return probability distribution outcome v
         #2)Using step one, initialize the self variables of s by saving numpy vector of valid moves and times visited.
-        #3)return -v.
+        #3)return v.
         #4)self.Ps[s], self.Vs[s], and self.Ns[s] are all initialized.
         if s not in self.Ps: #If s is not a key in self.Ps(which hashes s to its next available game states, then s must be a leaf.
             # leaf node
@@ -143,8 +147,8 @@ class MCTS():
                     cur_best = u
                     best_act = a
 
-        a = best_act #define action with highest UCB computed above as a. a is chosen over valids
-        print('The best action is: ' + str(a))
+        a = best_act #define action with highest UCB computed above as a. a is chosen over valids. Note that best_act is a single action we take when traversing a single depth of MCTS tree.
+        print('The action with highest UCB is: ' + str(a)) 
         next_s = self.game.getNextState(canonicalBoard, a) #returns next board state(game object)
         #next_s = self.game.getCanonicalForm(next_s, next_player) #canonical form does not matter for one player games. This line may be unnecessary.
 

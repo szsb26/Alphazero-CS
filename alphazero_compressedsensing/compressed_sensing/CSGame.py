@@ -33,10 +33,13 @@ class CSGame():
         #Construct the next state object
         next_state = State(nextstate_action_indices, nextstate_col_indices)
         
+        #FOR TESTING--------
         print('The Next State has the following action indices and currently held columns respectively:')
         print(next_state.action_indices)
         print(next_state.col_indices)
         print('')
+        #-------------------
+        
         
         return next_state 
 

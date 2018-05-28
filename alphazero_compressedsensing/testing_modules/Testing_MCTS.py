@@ -32,7 +32,7 @@ args = {
     'lambda': True, 
     #MCTS parameters
     'cpuct': 1,
-    'numMCTSSims':50,
+    'numMCTSSims':200,
     'tempThreshold':15,
     'gamma': 1,
     'epsilon': 1e-5,
@@ -85,24 +85,24 @@ game_start = test_game.getInitBoard(args, test_game_args)
 
 #TESTING MCTS OBJECT AND ITS METHODS
 #----------------------------------------------------
-print('Starting MCTS search...')
+print('Starting MCTS search on just the initial game state...')
 print('')
 print('The statistics of the initial game state are:')
 print(game_start.action_indices)
 print(game_start.col_indices)
-probs = test_MCTS.getActionProb(game_start)
+probs = test_MCTS.getActionProb(game_start) #50 numMCTSSims have been run to find the next move
 print('')
 print('Starting from the initial game state, the prob. dist. of the next move is:')
 print(probs)
 print('')
 
-print('After searching on the initial game state, the current self variables of the MCTS class are:')
-print('self.Qsa : ' + str(test_MCTS.Qsa))
-print('self.Nsa : ' + str(test_MCTS.Nsa))
-print('self.Ns : ' + str(test_MCTS.Ns))
-print('self.Ps : ' + str(test_MCTS.Ps))
-print('self.Es : ' + str(test_MCTS.Es))
-print('self.Vs : ' + str(test_MCTS.Vs))
+#print('After searching on the initial game state, the current self variables of the MCTS class are:')
+#print('self.Qsa : ' + str(test_MCTS.Qsa))
+#print('self.Nsa : ' + str(test_MCTS.Nsa))
+#print('self.Ns : ' + str(test_MCTS.Ns))
+#print('self.Ps : ' + str(test_MCTS.Ps))
+#print('self.Es : ' + str(test_MCTS.Es))
+#print('self.Vs : ' + str(test_MCTS.Vs))
 
 
 
