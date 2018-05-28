@@ -54,13 +54,16 @@ class NNetWrapper():
     def predict(self, state): 
     #INPUT: state object. Note that state.col_indices, state.feature_dic and state.converttoNNInput 
     #must all be computed before NNetWrapper.predict can make a meaningful prediction. 
-    #OUTPUT: p_as and v
+    #OUTPUT: p_as and v, where p_as is a numpy array of shape(args['n']+1, ) and v is a scalar value(float)
         
         if state.nn_input == None:
             print('nn_input of input state has not been computed')
             return
         else: 
-            p_as, v = self.nnet.model.predict(state.nn_input)   
+            p_as, v = self.nnet.model.predict(state.nn_input)#p_as.shape(1,n+1), v.shape = (1,1)
+            p_as = p_as.flatten() #change array shape to (n+1,). 
+            v = v[0][0] #v is now a scalar instead of a matrix of size (1,1)
+            
             return p_as, v
     
     def save_checkpoint(self, folder, filename):

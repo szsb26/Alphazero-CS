@@ -1,6 +1,7 @@
 from Game_Args import Game_args
 from CSState import State
 import numpy as np
+import copy
 
 class CSGame(): 
 
@@ -16,25 +17,28 @@ class CSGame():
     def getNextState(self, state, action): 
     #input is a State object and an action(integer) which is less than column size of A + 1. 
     #Output is the next state as a CSState object with new self.action_indices and self.col_indices.
-        if state.action_indices[-1] == 1: #Last entry of the state.action_indices numpy vector is the stop action. 
-            print ('Already at terminal state, no more actions can be taken.')
-            return state    
-        elif state.action_indices[action] == 1:
-            print (str(action) + ' action already taken, invalid move.')
-            return state
-        else:
-            nextstate_action_indices = np.array(state.action_indices)
-            nextstate_action_indices[action] = 1
-            
-            #Check if the action taken was a stopping action and construct next state's column indices
-            if action < state.action_indices.size-1: #Note that state.action_indices[state.action_indices.size-1] = stopping action
-                nextstate_col_indices = copy.deepcopy(state.col_indices).append(action)
-            else: #if stop action was taken, then the next state's taken columns are the same
-                nextstate_col_indices = copy.deepcopy(state.col_indices)
-            
-            next_state = State(nextstate_action_indices, nextstate_col_indices)
-            
-            return next_state 
+    #This method is only called in MCTS.py for when s is NOT A LEAF and NOT A TERMINAL STATE, since MCTS search stops when terminal node is met
+        
+        
+        #Construct new col_indices for next state. If action was stopping action, DO NOT add to col_indices
+        
+        if action != state.action_indices.size - 1: #Note that state.action_indices[state.action_indices.size - 1] is the stopping action
+            nextstate_col_indices = copy.deepcopy(state.col_indices)
+            nextstate_col_indices.append(action)
+        else: #if stopping action was chosen as best action, then the column indices of next state is the same as current state
+            nextstate_col_indices = copy.deepcopy(state.col_indices)
+        #Construct action_indices for next state
+        nextstate_action_indices = np.array(state.action_indices)
+        nextstate_action_indices[action] = 1
+        #Construct the next state object
+        next_state = State(nextstate_action_indices, nextstate_col_indices)
+        
+        print('The Next State has the following action indices and currently held columns respectively:')
+        print(next_state.action_indices)
+        print(next_state.col_indices)
+        print('')
+        
+        return next_state 
 
     def getValidMoves(self, state): #O(n) operation
     #input is a State object. Output is a binary numpy vector for valid moves,

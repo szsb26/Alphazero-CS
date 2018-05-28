@@ -138,17 +138,17 @@ class MCTS():
                     #was visited. Note that self.Ns[s] = sum over b of self.Nsa[(s,b)], so the equation above is equal to surag nair's notes.
                 else:
                     u = self.args['cpuct']*self.Ps[s][a]*math.sqrt(self.Ns[s] + EPS)     # Q = 0 ?
-                    print(u)
 
                 if u > cur_best: #because this is equivalent to taking the max, this is why our rewards are negative!!!!!
                     cur_best = u
                     best_act = a
 
-        a = best_act #define action with highest UCB computed above as a.
+        a = best_act #define action with highest UCB computed above as a. a is chosen over valids
+        print('The best action is: ' + str(a))
         next_s = self.game.getNextState(canonicalBoard, a) #returns next board state(game object)
         #next_s = self.game.getCanonicalForm(next_s, next_player) #canonical form does not matter for one player games. This line may be unnecessary.
 
-        v = self.search(next_s) #traverse from root to a leaf using recursive search. 
+        v = self.search(next_s) #traverse from root to a leaf or terminal node using recursive search. 
         
         #because we recursively search in the line above, the below snippet updates self.Qsa and self.Nsa of all visited nodes from the bottom to the root.
         #Because we reach a leaf sooner or later, the middle section is executed and v below is well defined!

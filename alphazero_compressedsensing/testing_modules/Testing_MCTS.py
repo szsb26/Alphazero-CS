@@ -58,11 +58,11 @@ game_start = test_game.getInitBoard(args, test_game_args)
 #print('')
 
 #Compute NN representation and test prediction
-game_start.compute_x_S_and_res(args, test_game_args)
+#game_start.compute_x_S_and_res(args, test_game_args)
 #print('Feature Dictionary info: ')
 #print(game_start.feature_dic)
 #print('')
-game_start.converttoNNInput()
+#game_start.converttoNNInput()
 #print('NN_input data info: ')
 #print(game_start.nn_input)
 #print(len(game_start.nn_input))
@@ -72,25 +72,38 @@ game_start.converttoNNInput()
 
 #TESTING SOME NNETWRAPPER METHODS
 #----------------------------------------------------
-p_as, z = test_nnet.predict(game_start)
-print('The predicted probability dist is: ')
-print(p_as)
-print('')
-print('The predicted reward is: ')
-print(z)
-print('')
+#p_as, z = test_nnet.predict(game_start)
+#print('The predicted probability dist is: ')
+#print(p_as)
+#print(p_as.shape)
+#print('')
+#print('The predicted reward is: ')
+#print(z)
+#print(z.shape)
+#print('')
 
 
 #TESTING MCTS OBJECT AND ITS METHODS
 #----------------------------------------------------
-#Testing a single search/simulation of MCTS
-v = test_MCTS.search(game_start)
-print(v)
+print('Starting MCTS search...')
+print('')
+print('The statistics of the initial game state are:')
+print(game_start.action_indices)
+print(game_start.col_indices)
 probs = test_MCTS.getActionProb(game_start)
+print('')
+print('Starting from the initial game state, the prob. dist. of the next move is:')
+print(probs)
+print('')
 
+print('After searching on the initial game state, the current self variables of the MCTS class are:')
+print('self.Qsa : ' + str(test_MCTS.Qsa))
+print('self.Nsa : ' + str(test_MCTS.Nsa))
+print('self.Ns : ' + str(test_MCTS.Ns))
+print('self.Ps : ' + str(test_MCTS.Ps))
+print('self.Es : ' + str(test_MCTS.Es))
+print('self.Vs : ' + str(test_MCTS.Vs))
 
-
-#Testing getActionProb
 
 
 
