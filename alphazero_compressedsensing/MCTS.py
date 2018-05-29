@@ -35,8 +35,10 @@ class MCTS():
         #print(self.game_args.sensing_matrix)
         #print(self.game_args.obs_vector)
         #print(canonicalBoard.action_indices)
-        for i in range(self.args['numMCTSSims']):  
-            print(i)
+        for i in range(self.args['numMCTSSims']):
+            #FOR TESTING---------------------  
+            #print(i)
+            #--------------------------------
             self.search(canonicalBoard)
         
         #Count the number of times an action was taken from the canonicalBoard state as root node
@@ -148,7 +150,9 @@ class MCTS():
                     best_act = a
 
         a = best_act #define action with highest UCB computed above as a. a is chosen over valids. Note that best_act is a single action we take when traversing a single depth of MCTS tree.
-        print('The action with highest UCB is: ' + str(a)) 
+        #FOR TESTING---------------------------
+        #print('The action with highest UCB is: ' + str(a)) 
+        #--------------------------------------
         next_s = self.game.getNextState(canonicalBoard, a) #returns next board state(game object)
         #next_s = self.game.getCanonicalForm(next_s, next_player) #canonical form does not matter for one player games. This line may be unnecessary.
 

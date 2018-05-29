@@ -11,7 +11,7 @@ args = {
     'x_type': 'sdnormal',
     'm': 5, #row dimension of A
     'n':15, #column dimension of A
-    'sparsity':5, #dictates the maximum sparsity of x when generating the random vector x. Largest number of nonzeros of x is sparsity-1.
+    'sparsity':5, #dictates the maximum sparsity of x when generating the random vector x. Largest number of nonzeros of x is sparsity-1. sparsity cannot be greater than m above. 
     #---------------------------------------------------------------
     #General Alphazero Parameters
     'save_into_csv_batch': 1000, #dictates how many training pairs we save at a time into csv file in case of memory overflow

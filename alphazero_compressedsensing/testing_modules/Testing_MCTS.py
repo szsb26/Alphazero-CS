@@ -1,57 +1,13 @@
-import sys
-#Add Class files to the sys search path for importing later on
-sys.path.insert(0,'/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing')
-sys.path.insert(0,'/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing/compressed_sensing')
-sys.path.insert(0,'/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing/compressed_sensing/keras_tf')
-from CSGame import CSGame
-from CSState import State
-from Game_Args import Game_args
-from NNet import NNetWrapper
-from Coach import Coach
-from MCTS import MCTS
-import numpy as np
+from Test_Class import Test
 
-#Testing the MCTS with NN module. 
-#Initialize for MCTS search
-
-args = {
-    #CS Parameters
-    'matrix_type': 'sdnormal',
-    'x_type': 'sdnormal',
-    'm': 5,
-    'n':15,
-    'sparsity':5,
-    #NN Parameters
-    'lr':0.001,
-    'num_layers':2,
-    'neurons_per_layer':50,
-    'epochs':10,
-    'batch_size':64,
-    'num_features':2,
-    'x_l2': True,
-    'lambda': True, 
-    #MCTS parameters
-    'cpuct': 1,
-    'numMCTSSims':200,
-    'tempThreshold':15,
-    'gamma': 1,
-    'epsilon': 1e-5,
-}
-
-#Initialize Game_args, NNetWrapper, CSGame, and MCTS
-test_game_args = Game_args()
-test_game_args.generateSensingMatrix(args['m'], args['n'], args['matrix_type'])
-test_game_args.generateNewObsVec(args['x_type'], args['sparsity'])
-
-test_nnet = NNetWrapper(args)
-test_game = CSGame()
-test_MCTS = MCTS(test_game, test_nnet, args, test_game_args)  
+#Construct Test Case
+Test = Test()
 
 #TESTING STATE METHODS AND NN PREDICTIONS
 #----------------------------------------------------
 
 #Test and output state self variables
-game_start = test_game.getInitBoard(args, test_game_args)
+game_start = Test.game.getInitBoard(Test.args, Test.game_args)
 #print('The action indices are: ' + str(game_start.action_indices))
 #print('')
 #print('The column indices are: ' + str(game_start.col_indices))
@@ -90,11 +46,48 @@ print('')
 print('The statistics of the initial game state are:')
 print(game_start.action_indices)
 print(game_start.col_indices)
-probs = test_MCTS.getActionProb(game_start) #50 numMCTSSims have been run to find the next move
+probs = Test.MCTS.getActionProb(game_start) #50 numMCTSSims have been run to find the next move
 print('')
 print('Starting from the initial game state, the prob. dist. of the next move is:')
 print(probs)
 print('')
+s = Test.game.stringRepresentation(game_start)
+print('MCTS tree statistics for initial state, action 2')
+print('self.Qsa[(s,2)]: ' + str(Test.MCTS.Qsa[(s, 2)]))
+print('self.Nsa[(s,2)]: ' + str(Test.MCTS.Nsa[(s, 2)]))
+print('self.Ns[s]: ' + str(Test.MCTS.Ns[s]))
+print('self.Ps[s]: ' + str(Test.MCTS.Ps[s]))
+print('self.Es[s]: ' + str(Test.MCTS.Es[s]))
+print('self.Vs[s]: ' + str(Test.MCTS.Vs[s]))
+
+print('Starting MCTS search on the state where action 2 was taken from initial game state')
+print('')
+print('The statistics of the state are:')
+first_state = Test.game.getNextState(game_start, 2)
+print(first_state.action_indices)
+print(first_state.col_indices)
+probs2 = Test.MCTS.getActionProb(first_state)
+print('')
+print('The prob. dist of the next move is:')
+print(probs2)
+print('')
+
+
+#Print some MCTS object statistics
+s1 = Test.game.stringRepresentation(first_state)
+print('MCTS tree statistics for initial state, action 2')
+print('self.Qsa[(s,2)]: ' + str(Test.MCTS.Qsa[(s, 2)]))
+print('self.Nsa[(s,2)]: ' + str(Test.MCTS.Nsa[(s, 2)]))
+print('self.Ns[s]: ' + str(Test.MCTS.Ns[s]))
+print('self.Ps[s]: ' + str(Test.MCTS.Ps[s]))
+print('self.Es[s]: ' + str(Test.MCTS.Es[s]))
+print('self.Vs[s]: ' + str(Test.MCTS.Vs[s]))
+print('self.Ns[s1]: ' + str(Test.MCTS.Ns[s1]))
+print('self.Ps[s1]: ' + str(Test.MCTS.Ps[s1]))
+print('self.Es[s1]: ' + str(Test.MCTS.Es[s1]))
+print('self.Vs[s1]: ' + str(Test.MCTS.Vs[s1]))
+
+print('the sparse vector x is: ' + str(Test.game_args.sparse_vector))
 
 #print('After searching on the initial game state, the current self variables of the MCTS class are:')
 #print('self.Qsa : ' + str(test_MCTS.Qsa))

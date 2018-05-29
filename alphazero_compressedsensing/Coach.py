@@ -25,7 +25,9 @@ class Coach():
         self.trainExamplesHistory = []    # history of examples from args.numItersForTrainExamplesHistory latest iterations
         self.skipFirstSelfPlay = False # can be overriden in loadTrainExamples()
 
-    def executeEpisode(self):
+    def executeEpisode(self): 
+    #NOTE CURRENTLY THAT IF THE STOPPING ACTION IS CHOSEN, THEN THE STATE WITH STOPPING ACTION SET TO 1 WILL NOT BE IN trainExamples!!
+    #WHAT IF STOPPING ACTION IS TAKEN IMMEDIATELY AFTER INITIAL GAME STATE?
         #INPUT: None
         #
         #OUTPUT: list of state objects, where for every state, state.pi_as, state.z, and state.feature_dic have all been
@@ -36,7 +38,7 @@ class Coach():
         #has state.feature_dic, state.pi_as, and state.z updated. Finally every state in states is
         #converted into a format recognizable by the Neural Network. 
         
-        state = self.game.getInitBoard(self.args) #State Object
+        state = self.game.getInitBoard(self.args, self.game_args) #State Object
         action_size = self.game.getActionSize(self.args)
         states = [] #will convert all states into X using NNet.convertStates
         trainExamples = []
@@ -55,20 +57,27 @@ class Coach():
             #Note that MCTS.getActionProb runs a fixed number of MCTS.search determined by 
             #args['numMCTSSims']
             pi = self.mcts.getActionProb(state, temp=temp)
-            state.pi_as = pi #update the label pi_as
+            state.pi_as = pi #update the label pi_as since getActionProb does not do this
             #Construct the States_List and Y
             states.append(state)
             #choose a random action (integer) with prob in pi.
             action = np.random.choice(len(pi), p=pi)
+            #FOR TESTING------------------
+            print('The next action taken is: ' + str(action))
+            #-----------------------------
             #Given the randomly generated action, move the root node to the next state.   
             state = self.game.getNextState(state, action)
 
-            r = self.game.getGameEnded(state, self.game_args)
+            r = self.game.getGameEnded(state, self.args, self.game_args) #float value
+            #FOR TESTING------------------
+            print('The reward for the next state ' + str(state.col_indices) + ' is: ' + str(r))
+            #-----------------------------
             
             #return breaks out of the while loop. If r not equal to 0, that means the state we are
             #on is a terminal state, which implies we should propagate the rewards up to every 
             #state in states
             if r!=0:
+                states.append(state) #append the last state with nonzero reward
                 for state in states:
                     #compute state.feature_dic
                     state.compute_x_S_and_res(self.args, self.game_args)
@@ -76,6 +85,7 @@ class Coach():
                     state.z = r
                 trainExamples = states 
                 return trainExamples #returns a list of state objects with features, labels all computed
+                
     
     #learn() IS THE PRIMARY METHOD WHICH STARTS ALPHAZERO!!!
     def learn(self):

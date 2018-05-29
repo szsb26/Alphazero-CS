@@ -1,5 +1,8 @@
+#Test_Case class so we do not have to continuously copy code
+#To Construct a Test Case, import the below class to initialize MCTS, Game_args, Game, etc...
 import sys
 #Add Class files to the sys search path for importing later on
+sys.path.insert(0,'/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing')
 sys.path.insert(0,'/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing/compressed_sensing')
 sys.path.insert(0,'/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing/compressed_sensing/keras_tf')
 from CSGame import CSGame
@@ -7,6 +10,7 @@ from CSState import State
 from Game_Args import Game_args
 from NNet import NNetWrapper
 from Coach import Coach
+from MCTS import MCTS
 import numpy as np
 
 args = {
@@ -15,7 +19,7 @@ args = {
 	'x_type': 'sdnormal',
 	'm': 5,	#row dimension of A
 	'n':10,	#column dimension of A
-	'sparsity':2,
+	'sparsity':5, #dictates the maximum generated sparsity of vector x. Also dictates the number of turns in a single CS game. Largest number of nonzeros of x is sparsity-1. sparsity cannot be greater than m above.
 	#---------------------------------------------------------------
 	#General Alphazero Parameters
 	'training_samples': 100000, #dictates how many training_samples are generated per iteration of alphazero algorithm
@@ -52,23 +56,15 @@ args = {
     'epsilon':1e-5,
 }
 
-#Only if "python main.py" is executed in command line will the below execute
-if __name__=='__main__':
-
-	#Initialize game, nnet, args, and Game_args
-	#Initialize Game_args
-	Game_args = Game_args()
-	Game = CSGame()
-	nnet = NNetWrapper(args)
-	
-	#if 'load_model' = True, then load the current best model with its weights. Currently set to false because we havent
-	#trained anything yet
-	if args['load_model']:
-		nnet.load_checkpoint(args['load_folder_(folder)'], args['load_folder_(filename)'])
-
-	c = Coach(Game, nnet, args, Game_args)
-	if args['load_model']:
-		print("Load trainExamples from file")
-		c.loadTrainExamples()
-	c.learn() #primary command which starts alphazero!!!!
-
+class Test():
+    def __init__(self):
+        self.args = args
+        test_game_args = Game_args()
+        test_game_args.generateSensingMatrix(args['m'], args['n'], args['matrix_type'])
+        test_game_args.generateNewObsVec(args['x_type'], args['sparsity'])
+        self.game_args = test_game_args
+        self.nnet = NNetWrapper(args)
+        self.game = CSGame()
+        self.MCTS = MCTS(self.game, self.nnet, self.args, self.game_args)
+        self.coach = Coach(self.game, self.nnet, self.args, self.game_args)
+        

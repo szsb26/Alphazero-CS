@@ -35,7 +35,7 @@ class State():
                 S = self.col_indices #Assume self.col_indices has already been computed from MCTS state creation.
                 A_S = Game_args.sensing_matrix[:,S]
                 x = np.linalg.lstsq(A_S, Game_args.obs_vector) #x[0] contains solution, x[1] contains the sum squared residuals, x[2] contains rank, x[3] contains singular values
-                opt_sol_l2 = np.zeros(Game_args.sensing_matrix.shape[1])
+                opt_sol_l2 = np.zeros(args['n'])
                 i = 0
                 for k in S:
                     opt_sol_l2[k] = x[0][i]
@@ -47,9 +47,9 @@ class State():
                 print('selected feature set to false in args')
             #FEATURE 2:
             if args['lambda'] == True: 
-                if not x[1]: #If the residual x[1] is an empty list [], then A_Sx - y is solved exactly.
+                if not x[1]: #x[1] is a (1,) array which contains the squared residual. x[1] is empty if lstsq solved exactly or rank of matrix is less than n(columns)
                 #WE ASSUME A HAS FULL RANK. Hence, in this case, the residual is a np vector of zeros
-                    col_res_IP = np.zeros(Game_args.sensing_matrix[1])
+                    col_res_IP = np.zeros(args['n'])
                 else:
                     residual_vec = Game_args.obs_vector - np.matmul(A_S, x[0])
                     col_res_IP = np.matmul(Game_args.sensing_matrix.transpose(), residual_vec)
@@ -59,7 +59,7 @@ class State():
             else:               
                 print('selected feature set to false in args')
         else: #If column indices is empty, this means we have not chosen any columns
-            self.feature_dic['x_l2'] = np.zeros(Game_args.sensing_matrix.shape[1])
+            self.feature_dic['x_l2'] = np.zeros(args['n'])
             self.feature_dic['col_res_IP'] = np.matmul(Game_args.sensing_matrix.transpose(), Game_args.obs_vector)
         
     def computeTermReward(self, args, Game_args): #determine whether terminal state conditions are met. If any of the terminal state conditions are met, return terminal value, which is negative
@@ -68,13 +68,16 @@ class State():
             A_S = Game_args.sensing_matrix[:,S]
             x = np.linalg.lstsq(A_S, Game_args.obs_vector)
         
-            if not x[1]: #Case in which residual returns an empty size 1 array, which implies state.num_col = number of rows of sensing matrix
+            if not x[1]: #Case in which residual returns an empty size 1 array, which implies there is an exact solution or rank of matrix less than n(num of columns)
                 self.termreward = - len(self.col_indices)
-            elif len(self.col_indices) == Game_args.game_iter or self.action_indices[-1] == 1 or x[1] < args['epsilon']:
-                self.termreward = - len(self.col_indices) - args['gamma']*x[1]
+            elif len(self.col_indices) == Game_args.game_iter or self.action_indices[-1] == 1 or x[1][0] < args['epsilon']:
+                self.termreward = - len(self.col_indices) - args['gamma']*x[1][0]
             else:
                 self.termreward = 0 #not terminal state
-        else: #If self.col_indices is an empty list, that means we have not chosen any columns, so we are definitely not at a terminal node. Set self.termreward to 0.
+        elif self.action_indices[-1] == 1: #If self.col_indices is an empty list, but stopping action was taken, then reward is exactly equal to the negative of squared norm of y
+            self.termreward = -np.linalg.norm(Game_args.obs_vector)**2
+            
+        else:#If self.col_indices is an empty list, and self.action_indices[-1] != 1, then we are not at a terminal state. Set self.terreward to zero.
             self.termreward = 0
             
     
