@@ -1,6 +1,6 @@
 from Test_Class import Test
 
-#Construct Test Case
+#Load Testing environment
 Test = Test()
 
 #TESTING STATE METHODS AND NN PREDICTIONS

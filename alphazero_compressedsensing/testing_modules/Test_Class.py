@@ -24,13 +24,13 @@ args = {
 	#General Alphazero Parameters
 	'training_samples': 100000, #dictates how many training_samples are generated per iteration of alphazero algorithm
 	'save_into_csv_batch': 1000, #dictates how many training pairs we save at a time into csv file in case of memory overflow
-	'numIters': 1000, #number of alphazero iterations performed. Each iteration consists of 1)playing numEps self play games, 2) retraining neural network
+	'numIters': 1, #number of alphazero iterations performed. Each iteration consists of 1)playing numEps self play games, 2) retraining neural network
 	#numEps and maxlenOfQueue controls the size of iterationTrainExamples, which contains all the states(up to maxlenOfQueue) of numEps number of generated self-play games.
 	'numEps': 100, #dictates how many self play games are played each iteration of the algorithm
 	'maxlenOfQueue':500, #dictates total number of game states saved(NOT games). 
 	'numItersForTrainExamplesHistory': 2, #controls the size of trainExamplesHistory, which is a list of different iterationTrainExamples deques. 
-	'checkpoint': '/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing/training_data',
-	'load_folder_(folder)': '/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing/training_data',
+	'checkpoint': '/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing/testing_modules/test_training',
+	'load_folder_(folder)': '/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing/testing_modules/test_training',
 	'load_folder_(filename)': 'best.pth.tar',
 	'arenaCompare': 40, #number of games played to compare pmcts and nmcts
 	'updateThreshold': 0.6, #determines the percentage of games nmcts must win for us to update pmcts to nmcts

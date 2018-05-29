@@ -17,7 +17,7 @@ class Coach():
         self.args = args
         self.game_args = Game_args #Game_args object contains information about matrix A and observed vector y
         self.game = game
-        self.nnet = nnet    #new neural network
+        self.nnet = nnet    #new neural network wrapper object
         # the competitor network. SZ: Our competitor network is just another network which plays the same game as another network 
         # and we compare which network picks the sparsest vector. The network which picks the sparsest vector is chosen and we remember these weights.
         self.pnet = self.nnet.__class__(self.args)  #past neural network                                
@@ -77,7 +77,7 @@ class Coach():
             #on is a terminal state, which implies we should propagate the rewards up to every 
             #state in states
             if r!=0:
-                states.append(state) #append the last state with nonzero reward
+                states.append(state) #append the last state with nonzero reward. Note that p_as of the last terminal state is a vector of zeros. Refer to the default constructor of the State object
                 for state in states:
                     #compute state.feature_dic
                     state.compute_x_S_and_res(self.args, self.game_args)
@@ -101,8 +101,7 @@ class Coach():
 
         for i in range(1, self.args['numIters']+1):
             print('------ITER ' + str(i) + '------')
-            # examples of the iteration
-            if not self.skipFirstSelfPlay or i>1:
+            if not self.skipFirstSelfPlay or i>1: #default of self.skipFirstSelfPlay is False. If loading training from file then skipFirstSelfPlay is set to True. skipFirstSelfPlay allows us to load the latest nn_model with latest set of TrainingExamples
                 iterationTrainExamples = deque([], maxlen=self.args['maxlenOfQueue'])
                 #bookkeeping objects contained in pytorch_classification.utils
                 eps_time = AverageMeter()
@@ -145,13 +144,13 @@ class Coach():
             shuffle(trainExamples)
 
             # training new network, keeping a copy of the old one
-            self.nnet.save_checkpoint(folder=self.args['checkpoint'], filename='temp.pth.tar')
+            self.nnet.save_checkpoint(folder=self.args['checkpoint'], filename='temp.pth.tar') #copy old neural network into new one
             self.pnet.load_checkpoint(folder=self.args['checkpoint'], filename='temp.pth.tar')
-            pmcts = MCTS(self.game, self.pnet, self.args, self.game_args) #the old MCTS with old neural net, before training p = previous
+            pmcts = MCTS(self.game, self.pnet, self.args, self.game_args) #the MCTS with old neural net, before training p = previous
             
             #convert trainExamples into a format recognizable by Neural Network and train
             trainExamples = self.nnet.constructTraining(trainExamples)
-            self.nnet.train(trainExamples)
+            self.nnet.train(trainExamples)#Train the new neural network self.nnet
             nmcts = MCTS(self.game, self.nnet, self.args, self.game_args) #the new neural network after training n = new
                         
             print('PITTING AGAINST PREVIOUS VERSION')
@@ -175,14 +174,16 @@ class Coach():
     def saveTrainExamples(self, iteration): #save training examples (self.trainExamplesHistory to 
         #args['checkpoint'] folder with name of self.getCheckpointFile with given iteration. 
         folder = self.args['checkpoint']
-        if not os.path.exists(folder):
+        if not os.path.exists(folder): #if folder specified by args['checkpoint'] does not exist, then make it. 
             os.makedirs(folder)
         filename = os.path.join(folder, self.getCheckpointFile(iteration)+".examples")
         with open(filename, "wb+") as f:
             Pickler(f).dump(self.trainExamplesHistory)
         f.closed
 
-    def loadTrainExamples(self):
+    def loadTrainExamples(self): 
+    #load training examples from folder args['load_folder_(folder)'], with filename args['load_folder_(filename)'] + '.examples'
+    #set self.trainExamplesHistory as the training samples in the above file, and set skipFirstSelfPlay = True
         modelFile = os.path.join(self.args['load_folder_(folder)'], self.args['load_folder_(filename)'])
         examplesFile = modelFile+".examples"
         if not os.path.isfile(examplesFile):

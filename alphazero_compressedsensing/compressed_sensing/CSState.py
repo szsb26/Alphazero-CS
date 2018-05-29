@@ -15,7 +15,7 @@ class State():
         #compute terminal reward, 0 if not a terminal state.
         self.termreward = None
         #labels(if there are any)
-        self.pi_as = None
+        self.pi_as = np.zeros(actions_indicator.size)
         self.z = None
         #NN_input format for prediction(dont need labels for states we wish to predict)
         self.nn_input = None
@@ -47,7 +47,7 @@ class State():
                 print('selected feature set to false in args')
             #FEATURE 2:
             if args['lambda'] == True: 
-                if not x[1]: #x[1] is a (1,) array which contains the squared residual. x[1] is empty if lstsq solved exactly or rank of matrix is less than n(columns)
+                if not x[1]: #x[1] is a (1,) array which contains the squared residual. Here, x[1] is empty. x[1] is empty if lstsq solved exactly or rank of matrix is less than n(columns)
                 #WE ASSUME A HAS FULL RANK. Hence, in this case, the residual is a np vector of zeros
                     col_res_IP = np.zeros(args['n'])
                 else:
@@ -58,7 +58,7 @@ class State():
                 self.feature_dic['col_res_IP'] = col_res_IP
             else:               
                 print('selected feature set to false in args')
-        else: #If column indices is empty, this means we have not chosen any columns
+        else: #If column indices is empty, this means we have not chosen any columns, so current l2 solution is 0, and col_res_IP is A^T*y
             self.feature_dic['x_l2'] = np.zeros(args['n'])
             self.feature_dic['col_res_IP'] = np.matmul(Game_args.sensing_matrix.transpose(), Game_args.obs_vector)
         
