@@ -9,7 +9,7 @@ Test = Test()
 #parameters used: args['tempThreshold']
 #OUTPUT:returns a list of state objects, where state.pi_as, state.z, and state_feature_dic have all been computed
 #FUNCTION:Play a full game to a terminal state and return a list of states as training samples. 
-if False:
+if False: #Switch to True for testing
     trainExamples = Test.coach.executeEpisode()
     print('')
     print('length of trainExamples is: ' + str(len(trainExamples)))
@@ -68,9 +68,8 @@ if True:
     conv_training = Test.coach.nnet.constructTraining(trainExamples)
     
     Test.coach.nnet.train(conv_training[0], conv_training[1])
-    Test.coach.nnet.save_checkpoint(folder=Test.args['checkpoint'], filename = 'temp.pth.tar') #testing nnet.save_checkpoint functionality
-    Test.coach.nnet.load_checkpoint(folder=Test.args['checkpoint'], filename = 'temp.pth.tar') #testing the nnet.load_checkpoint functionality
-    #NEED TO COMPILE MODEL AFTER LOADING
+    Test.coach.nnet.save_checkpoint(folder=Test.args['network_checkpoint'], filename = 'temp') #testing nnet.save_checkpoint functionality
+    Test.coach.nnet.load_checkpoint(folder=Test.args['network_checkpoint'], filename = 'temp') #testing the nnet.load_checkpoint functionality
     Test.coach.nnet.nnet.model.compile(loss=['categorical_crossentropy','mean_squared_error'], metrics=['accuracy'], optimizer=Adam(Test.args['lr'])) 
     Test.coach.nnet.train(conv_training[0], conv_training[1])
     

@@ -20,9 +20,9 @@ args = {
     'numEps': 100, #dictates how many games are played each iteration of the algorithm
     'maxlenOfQueue':500, #dictates total number of game states saved(not games). 
     'numItersForTrainExamplesHistory': 2, #controls the size of trainExamplesHistory, which is a list of different iterationTrainExamples deques. 
-    'checkpoint': '/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing/training_data',
-    'load_folder_(folder)': '/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing/training_data',
-    'load_folder_(filename)': 'best.pth.tar',
+    'checkpoint': '/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing/training_data', #filepath for SAVING newly generated self play training data
+    'load_folder_(folder)': '/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing/training_data', #filepath for LOADING the latest set of training data
+    'load_folder_(filename)': 'best.pth.tar', #filename for LOADING the latest generated set of training data
     'arenaCompare': 40, #number of games played to compare pmcts and nmcts
     'updateThreshold': 0.6, #determines the percentage of games nmcts must win for us to update pmcts to nmcts
     #---------------------------------------------------------------
@@ -33,6 +33,7 @@ args = {
     'epochs': 10,   #number of training epochs
     'batch_size': 64, #dictates the batch_size when training 
     'num_features' : 2, #number of self-designed features used in the input
+    'network_checkpoint' : '/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing/network_checkpoint', #filepath for SAVING the temp neural network model/weights, checkpoint networks model/weights, and the best networks model/weights
     #features: True if we wish to use as a feature, False if we do not wish to use as a feature
     'x_l2' : True,      #solution to min_z||A_Sz - y||_2^2, where A_S is the submatrix of columns we have currently chosen
     'lambda' : True,    #the vector of residuals, lambda = A^T(A_Sx-y), where x is the optimal solution to min_z||A_Sz - y||_2^2

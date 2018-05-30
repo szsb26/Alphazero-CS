@@ -15,13 +15,13 @@ class Coach():
     """
     def __init__(self, game, nnet, args, Game_args):
         self.args = args
-        self.game_args = Game_args #Game_args object contains information about matrix A and observed vector y
+        self.game_args = Game_args #Game_args object contains information about matrix A and observed vector y. THIS SINGLE GAME ARGS IS USED FOR GENERATING THE A AND y FOR SELF PLAY GAMES!!! ONLY. 
         self.game = game
         self.nnet = nnet    #new neural network wrapper object
         # the competitor network. SZ: Our competitor network is just another network which plays the same game as another network 
         # and we compare which network picks the sparsest vector. The network which picks the sparsest vector is chosen and we remember these weights.
         self.pnet = self.nnet.__class__(self.args)  #past neural network                                
-        self.mcts = MCTS(self.game, self.nnet, self.args, self.game_args)
+        self.mcts = MCTS(self.game, self.nnet, self.args, self.game_args) #THIS MCTS OBJECT IS REINITIALIZED(Qsa, Nsa, Ns, Es, etc.... to empty dics) WHENEVER WE PLAY A NEW SELF PLAY GAME IN learn()
         self.trainExamplesHistory = []    # history of examples from args.numItersForTrainExamplesHistory latest iterations
         self.skipFirstSelfPlay = False # can be overriden in loadTrainExamples()
 
@@ -142,32 +142,35 @@ class Coach():
             for e in self.trainExamplesHistory: #Each e is a deque
                 trainExamples.extend(e)
             shuffle(trainExamples)
+            
+            #The Arena--------------------------------------------------------
+            #Setting Up the Arena
+            arena_game_args = Game_args() #create a new Game_args object just for use in the Arena. Note that self.game_args is only used to generate self-play games while this is used strictly for the arena. 
 
             # training new network, keeping a copy of the old one for duel in the arena.
-            self.nnet.save_checkpoint(folder=self.args['checkpoint'], filename='temp.pth.tar') #copy old neural network into new one
-            self.pnet.load_checkpoint(folder=self.args['checkpoint'], filename='temp.pth.tar')
-            pmcts = MCTS(self.game, self.pnet, self.args, self.game_args) #the MCTS with old neural net, before training p = previous
+            self.nnet.save_checkpoint(folder=self.args['network_checkpoint'], filename='temp') #copy old neural network into new one
+            self.pnet.load_checkpoint(folder=self.args['network_checkpoint'], filename='temp')
             
             #convert trainExamples into a format recognizable by Neural Network and train
             trainExamples = self.nnet.constructTraining(trainExamples)
-            self.nnet.train(trainExamples)#Train the new neural network self.nnet
-            nmcts = MCTS(self.game, self.nnet, self.args, self.game_args) #the new neural network after training n = new
-                        
+            self.nnet.train(trainExamples)#Train the new neural network self.nnet. The weights are now updated
+            
+            #Pitting the two neural networks self.pnet and self.nnet in the arena            
             print('PITTING AGAINST PREVIOUS VERSION')
-            arena_game_args = Game_args() #create a new Game_args object just for use in the Arena. 
-            arena = Arena(lambda x: np.argmax(pmcts.getActionProb(x, temp=0)),
-                          lambda x: np.argmax(nmcts.getActionProb(x, temp=0)), self.game, self.args, arena_game_args) #note that Arena will pit pmcts with nmcts, and Game_args A and y will change constantly.
+            
+            arena = Arena(self.pnet, self.nnet, self.game, self.args, arena_game_args) #note that Arena will pit pnet with nnet, and Game_args A and y will change constantly.
             pwins, nwins, draws = arena.playGames()
-
+            #-----------------------------------------------------------------
+            
+            
             print('NEW/PREV WINS : %d / %d ; DRAWS : %d' % (nwins, pwins, draws))
             if pwins+nwins > 0 and float(nwins)/(pwins+nwins) < self.args['updateThreshold']:
                 print('REJECTING NEW MODEL')
-                self.nnet.load_checkpoint(folder=self.args['checkpoint'], filename='temp.pth.tar')
-                #may need to recompile model here since we just loaded checkpoint
-            else:
+                self.nnet.load_checkpoint(folder=self.args['checkpoint'], filename='temp')
+            else:#saves the weights(.h5) and model(.json) twice. Creates nnet_checkpoint(i-1)_model.json and nnet_checkpoint(i-1)_weights.h5, and rewrites best_model.json and best_weights.h5
                 print('ACCEPTING NEW MODEL')
-                self.nnet.save_checkpoint(folder=self.args['checkpoint'], filename=self.getCheckpointFile(i))
-                self.nnet.save_checkpoint(folder=self.args['checkpoint'], filename='best.pth.tar')                
+                self.nnet.save_checkpoint(folder=self.args['network_checkpoint'], filename='nnet_checkpoint' + str(i-1))
+                self.nnet.save_checkpoint(folder=self.args['network_checkpoint'], filename='best')                
 
     def getCheckpointFile(self, iteration): #return a string which gives information about current checkpoint iteration
     #and file type (.tar)
@@ -183,9 +186,9 @@ class Coach():
             Pickler(f).dump(self.trainExamplesHistory)
         f.closed
 
-    def loadTrainExamples(self): 
+    def loadTrainExamples(self): #Not used above in learn(), but will be of use in main.py
     #load training examples from folder args['load_folder_(folder)'], with filename args['load_folder_(filename)'] + '.examples'
-    #set self.trainExamplesHistory as the training samples in the above file, and set skipFirstSelfPlay = True
+    #OUTPUT: set self.trainExamplesHistory as the training samples in the above file, and set skipFirstSelfPlay = True
         modelFile = os.path.join(self.args['load_folder_(folder)'], self.args['load_folder_(filename)'])
         examplesFile = modelFile+".examples"
         if not os.path.isfile(examplesFile):

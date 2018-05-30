@@ -1,6 +1,7 @@
 from CS_NNet import NetArch
 import numpy as np
 from keras.models import Model, model_from_json
+from keras.optimizers import Adam
 
 class NNetWrapper(): 
     def __init__(self, args): 
@@ -83,4 +84,6 @@ class NNetWrapper():
         self.nnet.model = model_from_json(loaded_model_json)
         #Load the weights
         self.nnet.model.load_weights(folder + '/' + filename + '_weights.h5')
+        #Recompile the model
+        self.nnet.model.compile(loss=['categorical_crossentropy','mean_squared_error'], metrics=['accuracy'], optimizer=Adam(self.args['lr']))
         

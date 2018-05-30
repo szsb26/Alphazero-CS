@@ -11,12 +11,10 @@ from Game_Args import Game_args
 #Load the testing environment
 Test = Test()
 #Define pmcts and nmcts
-pmcts = MCTS(Test.game, Test.coach.pnet, Test.args, Test.game_args)#pnet and nnet should be the same here(same model initialized with same weights)
-nmcts = MCTS(Test.game, Test.coach.nnet, Test.args, Test.game_args) 
 #Initialize a new Game_args object and initialize arena
 arena_game_args = Game_args()
-Test_Arena = Arena(lambda x: np.argmax(pmcts.getActionProb(x, temp=0)), lambda x: np.argmax(nmcts.getActionProb(x, temp=0)), Test.game, Test.args, arena_game_args)
+Test_Arena = Arena(Test.coach.pnet, Test.coach.nnet, Test.game, Test.args, arena_game_args)
 #Test Arena.playGame(). Play a single game. Whoever gets the higher reward is the winner. 
 #Test_Arena.playGame()
-#Test Arena.playGames()
+#Test Arena.playGames(). Play multiple games. Returns number of wins by player 1, player 2, and number of draws. 
 oneWon, twoWon, draws=Test_Arena.playGames(verbose = True)

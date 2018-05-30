@@ -44,6 +44,7 @@ args = {
     'batch_size': 64, #dictates the batch_size when training 
     'num_channels': 512,
     'num_features' : 2,
+    'network_checkpoint': '/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing/testing_modules/test_network_checkpoint',
     #features: True if we wish to use as a feature, False if we do not wish to use as a feature
     'x_l2' : True,		#solution to min_z||A_Sz - y||_2^2, where A_S is the submatrix of columns we have currently chosen
     'lambda' : True,	#the vector of residuals, lambda = A^T(A_Sx-y), where x is the optimal solution to min_z||A_Sz - y||_2^2

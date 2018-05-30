@@ -1,12 +1,13 @@
 import numpy as np
 from pytorch_classification.utils import Bar, AverageMeter
+from MCTS import MCTS
 import time
 
 class Arena():
     """
     An Arena class where any 2 agents can be pit against each other.
     """
-    def __init__(self, player1, player2, game, args, game_args):
+    def __init__(self, pnet, nnet, game, args, game_args): #game_args = arena_game_args. See Coach.py
         """
         Input:
             player 1,2: two functions that takes board as input, return action
@@ -15,16 +16,16 @@ class Arena():
                      display in othello/OthelloGame). Is necessary for verbose
                      mode.
         """
-        self.player1 = player1 #is usually lambda x: np.argmax(pmcts.getActionProb(x, temp=0), an anonymous function. self.player1(x) calls the function. Returns the index with largest value. See Coach.py
-        self.player2 = player2 #is usually lambda x: np.argmax(nmcts.getActionProb(x, temp=0), an anonymous function. self.player2(x) calls the function. Returns the index with largest value. See Coach.py
         self.game = game #usually C.game if C is a Coach object. See Coach.py
         self.game_args = game_args #game_args here is going to be arena_game_args in Coach.learn()
         self.args = args
+        self.player1 = pnet #lambda x: np.argmax(player1.getActionProb(x, temp=0))
+        self.player2 = nnet #lambda x: np.argmax(player2.getActionProb(x, temp=0))
         self.player1wins = 0
         self.player2wins = 0
     
 
-    def playGame(self, verbose=False):
+    def playGame(self, player1, player2, verbose=False): #player 1 and player 2 are lambda functions. Specifically, they are in the form of player1 = lambda x: np.argmax(pmcts.getActionProb(x, temp=0)), player2 = lambda x: np.argmax(nmcts.getActionProb(x, temp=0))
         """
         Executes one episode of a game. In the Compressed Sensing game, we see which
         neural network gets a reward which is smaller, and we pick the neural network model
@@ -34,7 +35,8 @@ class Arena():
             self.player1wins += 1 if player 1 wins
             self.player2wins += 1 if player 2 wins
         """
-        players = [self.player1, self.player2] #so players[0] = player 1, and players[1] = player 2
+        
+        players = [player1, player2] 
         end_states = []
     
         #2 Games are played. P1 plays one game and P2 plays another game. The winner is the one who chooses has highest reward. 
@@ -52,6 +54,7 @@ class Arena():
                 #----------------------------------------------
                 #Determine the column chosen by player 1
                 action = players[i](state)
+                print(action)
                 #Determine if the chosen moves were valid or not. If not (valid[action]==0, raise exception)
                 valids = self.game.getValidMoves(state)
                 if valids[action]==0:
@@ -101,7 +104,14 @@ class Arena():
         for i in range(self.args['arenaCompare']):
             self.game_args.generateSensingMatrix(self.args['m'], self.args['n'], self.args['matrix_type']) 
             self.game_args.generateNewObsVec(self.args['x_type'], self.args['sparsity'])
-            self.playGame(verbose)
+            #Reinitialize the MCTS Tree for player 1 and 2. Note that every time A and y are reinitialized, the MCTS tree must be reinitialized because we are playing a new game. 
+            pmcts = MCTS(self.game, self.player1, self.args, self.game_args) #MCTS reinitialized, meaning that MCTS statistics (Nsa, Qsa, Ns, Ps, Es, Vs) are all reset. This is because choosing the same columns across games with different A's and y's count as different states even though we are choosing the same columns.
+            nmcts = MCTS(self.game, self.player2, self.args, self.game_args)
+            #Set the player1 and player2 lambda functions
+            player1 = lambda x: np.argmax(pmcts.getActionProb(x, temp=0))
+            player2 = lambda x: np.argmax(nmcts.getActionProb(x, temp=0))
+            #play a game
+            self.playGame(player1, player2, verbose)
             
         oneWon = self.player1wins
         twoWon = self.player2wins
