@@ -62,13 +62,15 @@ if False:
     #Verify that the TrainExamples are loaded correctly
     print(Test.coach.trainExamplesHistory[a][b].action_indices)
     
-#2)Testing Neural Network Training
+#2)Testing Neural Network Training, nnet.train, nnet.save_checkpoint, nnet.load_checkpoint
 if True:
     trainExamples = Test.coach.executeEpisode()
     conv_training = Test.coach.nnet.constructTraining(trainExamples)
+    
     Test.coach.nnet.train(conv_training[0], conv_training[1])
     Test.coach.nnet.save_checkpoint(folder=Test.args['checkpoint'], filename = 'temp.pth.tar') #testing nnet.save_checkpoint functionality
     Test.coach.nnet.load_checkpoint(folder=Test.args['checkpoint'], filename = 'temp.pth.tar') #testing the nnet.load_checkpoint functionality
-    Test.coach.nnet.nnet.model.compile(loss=['categorical_crossentropy','mean_squared_error'], metrics=['accuracy'], optimizer=Adam(Test.args['lr'])) #NEED TO COMPILE MODEL AFTER LOADING
+    #NEED TO COMPILE MODEL AFTER LOADING
+    Test.coach.nnet.nnet.model.compile(loss=['categorical_crossentropy','mean_squared_error'], metrics=['accuracy'], optimizer=Adam(Test.args['lr'])) 
     Test.coach.nnet.train(conv_training[0], conv_training[1])
     

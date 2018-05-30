@@ -143,7 +143,7 @@ class Coach():
                 trainExamples.extend(e)
             shuffle(trainExamples)
 
-            # training new network, keeping a copy of the old one
+            # training new network, keeping a copy of the old one for duel in the arena.
             self.nnet.save_checkpoint(folder=self.args['checkpoint'], filename='temp.pth.tar') #copy old neural network into new one
             self.pnet.load_checkpoint(folder=self.args['checkpoint'], filename='temp.pth.tar')
             pmcts = MCTS(self.game, self.pnet, self.args, self.game_args) #the MCTS with old neural net, before training p = previous
@@ -154,14 +154,16 @@ class Coach():
             nmcts = MCTS(self.game, self.nnet, self.args, self.game_args) #the new neural network after training n = new
                         
             print('PITTING AGAINST PREVIOUS VERSION')
+            arena_game_args = Game_args() #create a new Game_args object just for use in the Arena. 
             arena = Arena(lambda x: np.argmax(pmcts.getActionProb(x, temp=0)),
-                          lambda x: np.argmax(nmcts.getActionProb(x, temp=0)), self.game, self.args, self.game_args) #note that Arena will pit pmcts with nmcts, and Game_args A and y will change constantly.
+                          lambda x: np.argmax(nmcts.getActionProb(x, temp=0)), self.game, self.args, arena_game_args) #note that Arena will pit pmcts with nmcts, and Game_args A and y will change constantly.
             pwins, nwins, draws = arena.playGames()
 
             print('NEW/PREV WINS : %d / %d ; DRAWS : %d' % (nwins, pwins, draws))
             if pwins+nwins > 0 and float(nwins)/(pwins+nwins) < self.args['updateThreshold']:
                 print('REJECTING NEW MODEL')
                 self.nnet.load_checkpoint(folder=self.args['checkpoint'], filename='temp.pth.tar')
+                #may need to recompile model here since we just loaded checkpoint
             else:
                 print('ACCEPTING NEW MODEL')
                 self.nnet.save_checkpoint(folder=self.args['checkpoint'], filename=self.getCheckpointFile(i))

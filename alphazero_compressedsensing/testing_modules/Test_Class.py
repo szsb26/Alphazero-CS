@@ -32,7 +32,7 @@ args = {
 	'checkpoint': '/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing/testing_modules/test_training',
 	'load_folder_(folder)': '/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing/testing_modules/test_training',
 	'load_folder_(filename)': 'best.pth.tar',
-	'arenaCompare': 40, #number of games played to compare pmcts and nmcts
+	'arenaCompare': 50, #number of games played to compare pmcts and nmcts
 	'updateThreshold': 0.6, #determines the percentage of games nmcts must win for us to update pmcts to nmcts
 	'load_model': False, 
 	#---------------------------------------------------------------
