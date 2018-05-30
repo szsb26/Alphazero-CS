@@ -167,7 +167,7 @@ class Coach():
             print('NEW/PREV WINS : %d / %d ; DRAWS : %d' % (nwins, pwins, draws))
             if pwins+nwins > 0 and float(nwins)/(pwins+nwins) < self.args['updateThreshold']:
                 print('REJECTING NEW MODEL')
-                self.nnet.load_checkpoint(folder=self.args['checkpoint'], filename='temp')
+                self.nnet.load_checkpoint(folder=self.args['network_checkpoint'], filename='temp')
             else:#saves the weights(.h5) and model(.json) twice. Creates nnet_checkpoint(i-1)_model.json and nnet_checkpoint(i-1)_weights.h5, and rewrites best_model.json and best_weights.h5
                 print('ACCEPTING NEW MODEL')
                 self.nnet.save_checkpoint(folder=self.args['network_checkpoint'], filename='nnet_checkpoint' + str(i-1))
