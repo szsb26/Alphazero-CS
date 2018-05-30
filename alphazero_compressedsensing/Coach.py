@@ -6,6 +6,7 @@ from pytorch_classification.utils import Bar, AverageMeter
 import time, os, sys
 from pickle import Pickler, Unpickler
 from random import shuffle
+from compressed_sensing.Game_Args import Game_args
 
 
 class Coach():
@@ -63,14 +64,14 @@ class Coach():
             #choose a random action (integer) with prob in pi.
             action = np.random.choice(len(pi), p=pi)
             #FOR TESTING------------------
-            print('The next action taken is: ' + str(action))
+            #print('The next action taken is: ' + str(action))
             #-----------------------------
             #Given the randomly generated action, move the root node to the next state.   
             state = self.game.getNextState(state, action)
 
             r = self.game.getGameEnded(state, self.args, self.game_args) #float value
             #FOR TESTING------------------
-            print('The reward for the next state ' + str(state.col_indices) + ' is: ' + str(r))
+            #print('The reward for the next state ' + str(state.col_indices) + ' is: ' + str(r))
             #-----------------------------
             
             #return breaks out of the while loop. If r not equal to 0, that means the state we are
@@ -119,7 +120,7 @@ class Coach():
                     # bookkeeping + plot progress
                     eps_time.update(time.time() - end)
                     end = time.time()
-                    bar.suffix  = '({eps}/{maxeps}) Eps Time: {et:.3f}s | Total: {total:} | ETA: {eta:}'.format(eps=eps+1, maxeps=self.args.numEps, et=eps_time.avg, total=bar.elapsed_td, eta=bar.eta_td)
+                    bar.suffix  = '({eps}/{maxeps}) Eps Time: {et:.3f}s | Total: {total:} | ETA: {eta:}'.format(eps=eps+1, maxeps=self.args['numEps'], et=eps_time.avg, total=bar.elapsed_td, eta=bar.eta_td)
                     bar.next()
                 bar.finish()
 
@@ -153,7 +154,7 @@ class Coach():
             
             #convert trainExamples into a format recognizable by Neural Network and train
             trainExamples = self.nnet.constructTraining(trainExamples)
-            self.nnet.train(trainExamples)#Train the new neural network self.nnet. The weights are now updated
+            self.nnet.train(trainExamples[0], trainExamples[1])#Train the new neural network self.nnet. The weights are now updated
             
             #Pitting the two neural networks self.pnet and self.nnet in the arena            
             print('PITTING AGAINST PREVIOUS VERSION')

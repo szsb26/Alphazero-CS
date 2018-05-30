@@ -15,8 +15,7 @@ class Game_args(): #We save the args in Game_args class here because later on we
             self.sensing_matrix = np.random.rand(m,n)
     
     def generateNewObsVec(self, entry_type, sparsity): #Generate a vector x with number of nonzeros up to sparsity, with designated entry type. 
-        #if self.sensing_matrix == None: #If self.sensing_matrix has already been set, then this comparison throws an error. 
-            #return ('Sensing Matrix has not been set!')
+        #If self.sensing_matrix has not already been set, then this comparison throws an error. 
             
         x = np.zeros(self.sensing_matrix.shape[1])
         rand_sparsity = np.random.randint(1,sparsity)
