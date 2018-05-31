@@ -103,7 +103,8 @@ class Arena():
         
         #loop over number of games
         for i in range(self.args['arenaCompare']):
-            self.game_args.generateSensingMatrix(self.args['m'], self.args['n'], self.args['matrix_type']) 
+            if self.args['fixed_matrix'] == False:
+                self.game_args.generateSensingMatrix(self.args['m'], self.args['n'], self.args['matrix_type']) 
             self.game_args.generateNewObsVec(self.args['x_type'], self.args['sparsity'])
             #Reinitialize the MCTS Tree for player 1 and 2. Note that every time A and y are reinitialized, the MCTS tree must be reinitialized because we are playing a new game. 
             #Note that 2*args['arenaCompare'] amount of MCTS trees are created in every call of Arena.playGames

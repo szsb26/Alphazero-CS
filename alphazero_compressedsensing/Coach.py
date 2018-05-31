@@ -22,7 +22,7 @@ class Coach():
         self.nnet = nnet    #new neural network wrapper object
         # the competitor network. SZ: Our competitor network is just another network which plays the same game as another network 
         # and we compare which network picks the sparsest vector. The network which picks the sparsest vector is chosen and we remember these weights.
-        self.pnet = self.nnet.__class__(self.args)  #past neural network                                
+        self.pnet = self.nnet.__class__(self.args)  #past neural network. self.nnet is a NNetWrapper object, and self.pnet = self.nnet.__class__(self.args) instantiates another instance of the NNetWrapper object with self.args as input. self.pnet and self.nnet are not pointing to the same thing.                              
         self.mcts = MCTS(self.game, self.nnet, self.args, self.game_args) #THIS MCTS OBJECT IS REINITIALIZED(Qsa, Nsa, Ns, Es, etc.... to empty dics) WHENEVER WE PLAY A NEW SELF PLAY GAME IN learn()
         self.trainExamplesHistory = []    # history of examples from args.numItersForTrainExamplesHistory latest iterations
         self.skipFirstSelfPlay = False # can be overriden in loadTrainExamples()
@@ -98,8 +98,10 @@ class Coach():
         It then pits the new neural network against the old one and accepts it
         only if it wins >= updateThreshold fraction of games.
         """
-        #IF A is fixed, then generate A here before loop below:
-        #self.game_args.generateSensingMatrix(self.args['m'], self.args['n'], self.args['matrix_type'])
+        #IF A is fixed, then generate A here before loop below. Also, set arena_game_args.sensing_matrix to be equal to that of coach.game_args
+        if self.args['fixed_matrix'] == True:
+            self.game_args.generateSensingMatrix(self.args['m'], self.args['n'], self.args['matrix_type'])
+            self.arena_game_args.sensing_matrix = self.game_args.sensing_matrix
 
         for i in range(1, self.args['numIters']+1):
             print('------ITER ' + str(i) + '------')
@@ -113,7 +115,8 @@ class Coach():
                 #-----------------------------------------------------
                 for eps in range(self.args['numEps']):
                     #Initialize a new game by setting A, x, y, and then execute a single game of self play with self.executeEpisode()
-                    self.game_args.generateSensingMatrix(self.args['m'], self.args['n'], self.args['matrix_type']) #generate a new sensing matrix
+                    if self.args['fixed_matrix'] == False:
+                        self.game_args.generateSensingMatrix(self.args['m'], self.args['n'], self.args['matrix_type']) #generate a new sensing matrix
                     self.game_args.generateNewObsVec(self.args['x_type'], self.args['sparsity'])#generate a new observed vector y
                     self.mcts = MCTS(self.game, self.nnet, self.args, self.game_args)#create new search tree for each game we play
                     iterationTrainExamples += self.executeEpisode() #Play a new game with newly generated y. iterationTrainExamples is a deque containing states each generated self play game
