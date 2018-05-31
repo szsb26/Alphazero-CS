@@ -21,16 +21,16 @@ args = {
     'sparsity':5, #dictates the maximum sparsity of x when generating the random vector x. Largest number of nonzeros of x is sparsity-1. sparsity cannot be greater than m above. 
     #---------------------------------------------------------------
     #General Alphazero Parameters
-    'numIters': 50, #number of alphazero iterations performed. Each iteration consists of 1)playing numEps self play games, 2) retraining neural network
+    'numIters': 3, #number of alphazero iterations performed. Each iteration consists of 1)playing numEps self play games, 2) retraining neural network
     'numEps': 100, #dictates how many games are played each iteration of the algorithm
-    'maxlenOfQueue':1000, #dictates total number of game states saved(not games). 
+    'maxlenOfQueue':10000, #dictates total number of game states saved(not games). 
     'numItersForTrainExamplesHistory': 2, #controls the size of trainExamplesHistory, which is a list of different iterationTrainExamples deques. 
     'checkpoint': '/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing/training_data', #filepath for SAVING newly generated self play training data
     'load_training': False, #If set to True, then load latest batch of self play games for training. 
     'load_folder_(folder)': '/Users/sichenzhong/Desktop/Sichen/Graduate_School/ML/NN_MCTS_CS/python_src/alphazero_compressedsensing/training_data', #filepath for LOADING the latest set of training data
     'load_folder_(filename)': 'best.pth.tar', #filename for LOADING the latest generated set of training data
     'arenaCompare': 40, #number of games played in the arena to compare 2 networks pmcts and nmcts
-    'updateThreshold': 0.6, #determines the percentage of games nmcts must win for us to update pmcts to nmcts
+    'updateThreshold': 0.55, #determines the percentage of games nmcts must win for us to update pmcts to nmcts
     #---------------------------------------------------------------
     #NN Parameters
     'lr': 0.001,    #learning rate of NN

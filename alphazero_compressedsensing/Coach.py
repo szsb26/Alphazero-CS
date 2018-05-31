@@ -14,9 +14,10 @@ class Coach():
     This class executes the self-play + learning. It uses the functions defined
     in Game and NeuralNet. args are specified in main.py.  Game_args specified in Game_Args.py
     """
-    def __init__(self, game, nnet, args, Game_args):
+    def __init__(self, game, nnet, args, game_args):
         self.args = args
-        self.game_args = Game_args #Game_args object contains information about matrix A and observed vector y. THIS SINGLE GAME ARGS IS USED FOR GENERATING THE A AND y FOR SELF PLAY GAMES!!! ONLY. 
+        self.game_args = game_args #Game_args object contains information about matrix A and observed vector y. THIS SINGLE GAME ARGS IS USED FOR GENERATING THE A AND y FOR SELF PLAY GAMES!!! ONLY. 
+        self.arena_game_args = Game_args() #object used to generate instances of A and y across all arenas objects in learn
         self.game = game
         self.nnet = nnet    #new neural network wrapper object
         # the competitor network. SZ: Our competitor network is just another network which plays the same game as another network 
@@ -145,8 +146,6 @@ class Coach():
             shuffle(trainExamples)
             
             #The Arena--------------------------------------------------------
-            #Setting Up the Arena
-            arena_game_args = Game_args() #create a new Game_args object just for use in the Arena. Note that self.game_args is only used to generate self-play games while this is used strictly for the arena. 
 
             # training new network, keeping a copy of the old one for duel in the arena.
             self.nnet.save_checkpoint(folder=self.args['network_checkpoint'], filename='temp') #copy old neural network into new one
@@ -156,10 +155,10 @@ class Coach():
             trainExamples = self.nnet.constructTraining(trainExamples)
             self.nnet.train(trainExamples[0], trainExamples[1])#Train the new neural network self.nnet. The weights are now updated
             
-            #Pitting the two neural networks self.pnet and self.nnet in the arena            
+            #Pit the two neural networks self.pnet and self.nnet in the arena            
             print('PITTING AGAINST PREVIOUS VERSION')
             
-            arena = Arena(self.pnet, self.nnet, self.game, self.args, arena_game_args) #note that Arena will pit pnet with nnet, and Game_args A and y will change constantly.
+            arena = Arena(self.pnet, self.nnet, self.game, self.args, self.arena_game_args) #note that Arena will pit pnet with nnet, and Game_args A and y will change constantly. Note that next iteration, arena is a reference to a different object, so old object is deleted when there are no other references to it. 
             pwins, nwins, draws = arena.playGames()
             #-----------------------------------------------------------------
             

@@ -17,7 +17,7 @@ class Arena():
                      mode.
         """
         self.game = game #usually C.game if C is a Coach object. See Coach.py
-        self.game_args = game_args #game_args here is going to be arena_game_args in Coach.learn()
+        self.game_args = game_args #game_args here is going to be self.arena_game_args in Coach.learn()
         self.args = args
         self.player1 = pnet #lambda x: np.argmax(player1.getActionProb(x, temp=0))
         self.player2 = nnet #lambda x: np.argmax(player2.getActionProb(x, temp=0))
@@ -54,7 +54,8 @@ class Arena():
                 #----------------------------------------------
                 #Determine the column chosen by player 1
                 action = players[i](state)
-                print(action)
+                #FOR TESTING
+                #print(action)
                 #Determine if the chosen moves were valid or not. If not (valid[action]==0, raise exception)
                 valids = self.game.getValidMoves(state)
                 if valids[action]==0:
@@ -105,6 +106,7 @@ class Arena():
             self.game_args.generateSensingMatrix(self.args['m'], self.args['n'], self.args['matrix_type']) 
             self.game_args.generateNewObsVec(self.args['x_type'], self.args['sparsity'])
             #Reinitialize the MCTS Tree for player 1 and 2. Note that every time A and y are reinitialized, the MCTS tree must be reinitialized because we are playing a new game. 
+            #Note that 2*args['arenaCompare'] amount of MCTS trees are created in every call of Arena.playGames
             pmcts = MCTS(self.game, self.player1, self.args, self.game_args) #MCTS reinitialized, meaning that MCTS statistics (Nsa, Qsa, Ns, Ps, Es, Vs) are all reset. This is because choosing the same columns across games with different A's and y's count as different states even though we are choosing the same columns.
             nmcts = MCTS(self.game, self.player2, self.args, self.game_args)
             #Set the player1 and player2 lambda functions
