@@ -102,6 +102,8 @@ class Coach():
         if self.args['fixed_matrix'] == True:
             self.game_args.generateSensingMatrix(self.args['m'], self.args['n'], self.args['matrix_type'])
             self.arena_game_args.sensing_matrix = self.game_args.sensing_matrix
+            #Save the fixed matrix
+            self.game_args.save_Matrix(self.args['fixed_matrix_filepath'])
 
         for i in range(1, self.args['numIters']+1):
             print('------ITER ' + str(i) + '------')
@@ -149,31 +151,35 @@ class Coach():
             shuffle(trainExamples)
             
             #The Arena--------------------------------------------------------
-
-            # training new network, keeping a copy of the old one for duel in the arena.
-            self.nnet.save_checkpoint(folder=self.args['network_checkpoint'], filename='temp') #copy old neural network into new one
-            self.pnet.load_checkpoint(folder=self.args['network_checkpoint'], filename='temp')
+            if self.args['Arena'] == True:
+                self.nnet.save_checkpoint(folder=self.args['network_checkpoint'], filename='temp') #copy old neural network into new one
+                self.pnet.load_checkpoint(folder=self.args['network_checkpoint'], filename='temp')
             
-            #convert trainExamples into a format recognizable by Neural Network and train
-            trainExamples = self.nnet.constructTraining(trainExamples)
-            self.nnet.train(trainExamples[0], trainExamples[1])#Train the new neural network self.nnet. The weights are now updated
+                #convert trainExamples into a format recognizable by Neural Network and train
+                trainExamples = self.nnet.constructTraining(trainExamples)
+                self.nnet.train(trainExamples[0], trainExamples[1])#Train the new neural network self.nnet. The weights are now updated
             
-            #Pit the two neural networks self.pnet and self.nnet in the arena            
-            print('PITTING AGAINST PREVIOUS VERSION')
+                #Pit the two neural networks self.pnet and self.nnet in the arena            
+                print('PITTING AGAINST PREVIOUS VERSION')
             
-            arena = Arena(self.pnet, self.nnet, self.game, self.args, self.arena_game_args) #note that Arena will pit pnet with nnet, and Game_args A and y will change constantly. Note that next iteration, arena is a reference to a different object, so old object is deleted when there are no other references to it. 
-            pwins, nwins, draws = arena.playGames()
+                arena = Arena(self.pnet, self.nnet, self.game, self.args, self.arena_game_args) #note that Arena will pit pnet with nnet, and Game_args A and y will change constantly. Note that next iteration, arena is a reference to a different object, so old object is deleted when there are no other references to it. 
+                pwins, nwins, draws = arena.playGames()
+            
+                print('NEW/PREV WINS : %d / %d ; DRAWS : %d' % (nwins, pwins, draws))
+                if pwins+nwins > 0 and float(nwins)/(pwins+nwins) < self.args['updateThreshold']:
+                    print('REJECTING NEW MODEL')
+                    self.nnet.load_checkpoint(folder=self.args['network_checkpoint'], filename='temp')
+                else:#saves the weights(.h5) and model(.json) twice. Creates nnet_checkpoint(i-1)_model.json and nnet_checkpoint(i-1)_weights.h5, and rewrites best_model.json and best_weights.h5
+                    print('ACCEPTING NEW MODEL')
+                    self.nnet.save_checkpoint(folder=self.args['network_checkpoint'], filename='nnet_checkpoint' + str(i-1))
+                    self.nnet.save_checkpoint(folder=self.args['network_checkpoint'], filename='best')
             #-----------------------------------------------------------------
             
-            
-            print('NEW/PREV WINS : %d / %d ; DRAWS : %d' % (nwins, pwins, draws))
-            if pwins+nwins > 0 and float(nwins)/(pwins+nwins) < self.args['updateThreshold']:
-                print('REJECTING NEW MODEL')
-                self.nnet.load_checkpoint(folder=self.args['network_checkpoint'], filename='temp')
-            else:#saves the weights(.h5) and model(.json) twice. Creates nnet_checkpoint(i-1)_model.json and nnet_checkpoint(i-1)_weights.h5, and rewrites best_model.json and best_weights.h5
-                print('ACCEPTING NEW MODEL')
-                self.nnet.save_checkpoint(folder=self.args['network_checkpoint'], filename='nnet_checkpoint' + str(i-1))
-                self.nnet.save_checkpoint(folder=self.args['network_checkpoint'], filename='best')                
+            else:
+                print('TRAINING NEW NEURAL NETWORK...')
+                self.nnet.train(trainExamples[0], trainExamples[1])          
+                self.nnet.save_checkpoint(folder = self.args['network_checkpoint'], filename='nnet_checkpoint' + str(i-1))
+                self.nnet.save_checkpoint(folder=self.args['network_checkpoint'], filename = 'best')
 
     def getCheckpointFile(self, iteration): #return a string which gives information about current checkpoint iteration
     #and file type (.tar)

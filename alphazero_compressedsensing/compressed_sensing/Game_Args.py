@@ -1,4 +1,3 @@
-import sys
 import numpy as np
     
 class Game_args(): #We save the args in Game_args class here because later on we may need class methods to generate new matrices.
@@ -28,4 +27,8 @@ class Game_args(): #We save the args in Game_args class here because later on we
             
     def setIterations(self, iterations):
         self.game_iter = iterations
+        
+    def save_Matrix(self, filepath): #save current sensing_matrix to designated filepath
+        np.save(filepath + '/sensing_matrix.npy', self.sensing_matrix)
+
         
