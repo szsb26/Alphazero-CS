@@ -15,7 +15,7 @@ class NetArch():
         return model
     
     
-    def bootstrap_net(self, args):
+    def OMPbootstrap_Net(self, args):
         #Create the input and first hidden layer based on which features are initialized in args
         Inputs = []
         HL1 = []
