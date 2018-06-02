@@ -177,6 +177,7 @@ class Coach():
             
             else:
                 print('TRAINING NEW NEURAL NETWORK...')
+                trainExamples = self.nnet.constructTraining(trainExamples)
                 self.nnet.train(trainExamples[0], trainExamples[1])          
                 self.nnet.save_checkpoint(folder = self.args['network_checkpoint'], filename='nnet_checkpoint' + str(i-1))
                 self.nnet.save_checkpoint(folder=self.args['network_checkpoint'], filename = 'best')
