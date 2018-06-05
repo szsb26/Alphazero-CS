@@ -12,11 +12,11 @@ class Game_args(): #We save the args in Game_args class here because later on we
             self.sensing_matrix = np.random.randn(m,n)
             #column normalize the matrix:
             for i in range(n):
-                self.sensing_matrix[:,i] = self.sensing_matrix[:,i]/np.linalg.norm(self.sensing_matrix[:,i]
+                self.sensing_matrix[:,i] = self.sensing_matrix[:,i]/np.linalg.norm(self.sensing_matrix[:,i])
         if type == 'uniform01':
             self.sensing_matrix = np.random.rand(m,n)
             for i in range(n):
-                self.sensing_matrix[:,i] = self.sensing_matrix[:,i]/np.linalg.norm(self.sensing_matrix[:,i]
+                self.sensing_matrix[:,i] = self.sensing_matrix[:,i]/np.linalg.norm(self.sensing_matrix[:,i])
     
     def generateNewObsVec(self, entry_type, sparsity): #Generate a vector x with number of nonzeros up to sparsity, with designated entry type. 
         #If self.sensing_matrix has not already been set, then this comparison throws an error. 
