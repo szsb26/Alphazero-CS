@@ -17,4 +17,17 @@ OUTPUT:\
 \
 - 2) All self play games across all iterations in \'91training_data/\'91. The latest set of self play games is saved as \'91best.pth.tar\'92\
 \
+\
+FEATURES ADDED:\
+(May 31, 2018)\
+-added functionality to remove Arena/model selection to select the next best neural network. Change\
+ args[\'91Arena\'92] = False in main.py to turn this off.\
+\
+BUG FIXES:\
+(June 3, 2018)\
+-changed x[0:rand_sparsity] = np.random.normal(0,1) \'97\'97\'97> x[0:rand_sparsity] = np.random.normal(0, 1, rand_sparsity). The previous code was generating the same value for all sparse entries\
+\
+(June 4, 2018)\
+-added code in matrix A generation to normalize the columns. This is one of the criteria for using OMP on a sensing matrix. \
+\
 }
