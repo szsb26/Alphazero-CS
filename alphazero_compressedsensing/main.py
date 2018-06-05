@@ -31,7 +31,7 @@ args = {
     'load_training': False, #If set to True, then load latest batch of self play games for training. 
     'load_folder_(folder)': os.getcwd() + '/training_data', #filepath for LOADING the latest set of training data
     'load_folder_(filename)': 'best.pth.tar', #filename for LOADING the latest generated set of training data
-    'Arena': True, #determines whether model selection/arena is activated or not
+    'Arena': False, #determines whether model selection/arena is activated or not
         'arenaCompare': 100, #number of games played in the arena to compare 2 networks pmcts and nmcts
         'updateThreshold': 0.55, #determines the percentage of games nmcts must win for us to update pmcts to nmcts
     #---------------------------------------------------------------
