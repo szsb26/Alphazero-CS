@@ -30,19 +30,19 @@ class NetArch():
         #Build first layer (not fully connected) by iteratively building sets of neurons corresponding to an input feature. 
         #Concatenate all of these neurons to form the first hidden layer x. 
         for input in Inputs:
-             HL1_set = Dense(args['bootstrap_neurons_per_layer'], activation = 'relu')(input)
+             HL1_set = Dense(args['OMPbootstrap_neurons_per_layer'], activation = 'relu')(input)
              HL1.append(HL1_set)
         
         x = concatenate(HL1, axis = -1)
     
-        for i in range(args['bootstrap_num_layers']-1):
-            x = Dense(args['bootstrap_neurons_per_layer'], activation = 'relu')(x)
+        for i in range(args['OMPbootstrap_num_layers']-1):
+            x = Dense(args['OMPbootstrap_neurons_per_layer'], activation = 'relu')(x)
             
         #Define the output
         p_as = Dense(args['n']+1, activation = 'softmax', name = 'p_as')(x) 
         
         model = Model(inputs = Inputs, outputs = [p_as])
-        model.compile(loss=['categorical_crossentropy'], metrics=['accuracy'], optimizer=Adam(args['bootstrap_lr']))
+        model.compile(loss=['categorical_crossentropy'], metrics=['accuracy'], optimizer=Adam(args['OMPbootstrap_lr']))
         
         return model
 
