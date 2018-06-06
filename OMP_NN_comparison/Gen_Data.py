@@ -61,7 +61,7 @@ class GenData(): #Generates A, x, y. Also generates training data for neural net
                 with open(args['matrix_folder'] + '/matrix' + str(m) + '/y_x_data/obs_y.csv', 'r') as raw_features:
                     reader_y = csv.reader(raw_features)
                     for y in reader_y:
-                        y = list(map(float, y))
+                        y = list(map(float, y)) #y is now a list of floats. map(float,y) turns all entries of y into floats
                         writer_features.writerows([y])
                 with open(args['matrix_folder'] + '/matrix' + str(m) + '/y_x_data/sparse_x.csv', 'r') as raw_labels:
                     reader_x = csv.reader(raw_labels)
@@ -74,8 +74,10 @@ class GenData(): #Generates A, x, y. Also generates training data for neural net
         for m in range(args['matrices_generated']):
             #Make new directory for each matrix to save our constructed data
             os.mkdir(args['OMPbootstrap_training_filepath'] + '/matrix' + str(m))
-            with open(args['OMPbootstrap_training_filepath'] + '/matrix' + str(m) + '/NNfeatures.csv', 'a') as output_file_features, open(args['OMPbootstrap_training_filepath'] + '/matrix' + str(m) + '/NNlabels.csv', 'a') as output_file_labels:
-                writer_features = csv.writer(output_file_features)
+            os.mkdir(args['OMPbootstrap_training_filepath'] + '/matrix' + str(m) + '/features')
+            with open(args['OMPbootstrap_training_filepath'] + '/matrix' + str(m) + '/features' + '/NNfeature_xS.csv', 'a') as output_file_features1, open(args['OMPbootstrap_training_filepath'] + '/matrix' + str(m) + '/features' + '/NNfeature_lambda.csv', 'a') as output_file_features2, open(args['OMPbootstrap_training_filepath'] + '/matrix' + str(m) + '/NNlabels.csv', 'a') as output_file_labels:
+                writer_features_xS = csv.writer(output_file_features1)
+                writer_features_lambda = csv.writer(output_file_features2)
                 writer_labels = csv.writer(output_file_labels)
                 with open(args['matrix_folder'] + '/matrix' + str(m) + '/y_x_data/obs_y.csv', 'r') as raw_features, open(args['matrix_folder'] + '/matrix' + str(m) + '/y_x_data/sparse_x.csv', 'r') as raw_labels:
                     reader_y = csv.reader(raw_features)
@@ -99,8 +101,10 @@ class GenData(): #Generates A, x, y. Also generates training data for neural net
                         #i += 1
                         #print(i)
                         #Write new features and labels into the above created files
-                        writer_features.writerows([features])
-                        writer_labels.writerows([labels])
+                        for feature, label in zip(features, labels):
+                            writer_features_xS.writerows([feature[0]])
+                            writer_features_lambda.writerows([feature[1]])
+                            writer_labels.writerows([label])
     def gen_testData(self, args):
     #INPUT: None
     #OUTPUT: generate args number of test signals and save them to testData file

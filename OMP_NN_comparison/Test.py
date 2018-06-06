@@ -15,13 +15,18 @@ class Test():
     def trainAll(self): #train over all m generated matrices 
     #INPUT:
     #OUTPUT: saved models and weights of neural networks for each matrix and their generated training signals. from GenData
+        #For each matrix m, train respective Naive_net
+        #for m in range(self.args['matrices_generated']):
+            #if self.args['naive_NN'] == True:
+                #os.mkdir(self.args['naiveNN_savedmodels_filepath'] + '/matrix' + str(m))
+                #self.NNet.naiveNN_train(self.args['naiveNN_training_filepath'] + '/matrix' + str(m), self.args['naiveNN_savedmodels_filepath'] + '/matrix' + str(m))    
+                #self.NNet.naive_net = self.NNet.netWrapper.naiveNet(self.args) #reinitialize self.NNet object
+        #For each matrix m, train respective OMPbootstrapNN
         for m in range(self.args['matrices_generated']):
-            if self.args['naive_NN'] == True:
-                os.mkdir(self.args['naiveNN_savedmodels_filepath'] + '/matrix' + str(m))
-                self.NNet.naiveNN_train(self.args['naiveNN_training_filepath'] + '/matrix' + str(m), self.args['naiveNN_savedmodels_filepath'] + '/matrix' + str(m))    
-                self.NNet.naive_net = self.NNet.netWrapper.naiveNet(self.args) #reinitialize self.NNet object
             if self.args['OMPbootstrap_NN'] == True:
-                pass
+                os.mkdir(self.args['OMPbootstrap_savedmodels_filepath'] + '/matrix' + str(m))
+                self.NNet.OMPbootstrapNN_train(self.args['OMPbootstrap_training_filepath'] + '/matrix' + str(m), self.args['OMPbootstrap_savedmodels_filepath'] + '/matrix' + str(m))
+                self.NNet.OMPbootstrap_net = self.NNet.netWrapper.OMPbootstrap_Net(self.args) #reinitialize self.OMPbootstrap_Net object. Note that .netWrapper is a NetArch object 
                 
     def load_naiveNet_model(self, filepath):
     #INPUT: None
