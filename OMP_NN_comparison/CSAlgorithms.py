@@ -21,7 +21,9 @@ class CSAlgorithms():
         next_index = np.argmax(lambda_vec_init)
         pi = np.zeros(A.shape[1]) #Compute the label pi(one hot vector) of the next column chosen
         pi[next_index] = 1
-        label = pi 
+        v = 1/2*np.linalg.norm(residual_init)
+        v = np.reshape(v,(1,))
+        label = [pi, v] 
         #Add initial state feature and labels into output lists
         features.append(feature)
         labels.append(label)
@@ -33,12 +35,14 @@ class CSAlgorithms():
             #Compute lambda
             residual = y - np.matmul(A,x_star[:,i])
             lambda_vec = np.abs(np.matmul(A.T, residual))
-            feature = [x_star[:,i], lambda_vec] 
-            #Compute next chosen column and extend it to a one hot vector of size n. 
+            feature = [x_star[:,i], lambda_vec] #a length two list of numpy arrays
+            #Compute next chosen column and extend it to a one hot vector of size n. Also compute v.
             next_index = np.argmax(lambda_vec)
             pi = np.zeros(A.shape[1])
             pi[next_index] = 1
-            label = pi
+            v = np.count_nonzero(x_star[:,i]) + 1/2*np.linalg.norm(residual)
+            v = np.reshape(v,(1,))
+            label =[pi, v] #pi and v are both arrays here
             #add both feature and label into features and labels list
             features.append(feature)
             labels.append(label)

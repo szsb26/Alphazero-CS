@@ -38,9 +38,10 @@ class NetArch():
             
         #Define the output
         p_as = Dense(args['n'], activation = 'softmax', name = 'p_as')(x) 
+        v = Dense(1, name = 'v')(x)
         
-        model = Model(inputs = Inputs, outputs = [p_as])
-        model.compile(loss=['categorical_crossentropy'], metrics=['accuracy'], optimizer=Adam(args['OMPbootstrap_lr']))
+        model = Model(inputs = Inputs, outputs = [p_as, v])
+        model.compile(loss=['categorical_crossentropy','mean_squared_error'], metrics=['accuracy'], optimizer=Adam(args['OMPbootstrap_lr']))
         
         return model
 
