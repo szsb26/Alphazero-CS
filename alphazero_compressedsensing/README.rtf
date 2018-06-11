@@ -23,6 +23,9 @@ FEATURES ADDED:\
 -added functionality to remove Arena/model selection to select the next best neural network. Change\
  args[\'91Arena\'92] = False in main.py to turn Arena off.\
 \
+(June 11, 2018)\
+-added functionality to load trained nn models, sensing matrices, and training data.\
+\
 BUG FIXES:\
 (June 3, 2018)\
 -changed x[0:rand_sparsity] = np.random.normal(0,1) \'97\'97\'97> x[0:rand_sparsity] = np.random.normal(0, 1, rand_sparsity). The previous code was generating the same value for all sparse entries\
