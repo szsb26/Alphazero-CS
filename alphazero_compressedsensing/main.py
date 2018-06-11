@@ -14,8 +14,9 @@ from NNet import NNetWrapper
 #args dictionary which dictates behavior of NN, and MCTS, and Alphazero.
 args = {
     #Compressed Sensing Parameters, Ax = y, where A is of size m by n
-    'fixed_matrix': True, #fixes a single matrix across entire alphazero algorithm. If set to True, then self play games generated in each iteration have different sensing matrices. 
-    'fixed_matrix_filepath': os.getcwd() + '/fixed_sensing_matrix', #If args['fixed_matrix'] above is set to True, then this parameter determines where the fixed sensing matrix is saved.
+    'fixed_matrix': True, #fixes a single matrix across entire alphazero algorithm. If set to True, then self play games generated in each iteration have different sensing matrices. The below options will not run if this is set to False.
+        'load_existing_matrix': True, #If we are using a fixed_matrix, then this option toggles whether to load an existing matrix from args['fixed_matrix_filepath'] or generate a new one. If loading an existing matrix, the matrix must be saved as name 'sensing_matrix.npy'
+    'fixed_matrix_filepath': os.getcwd() + '/fixed_sensing_matrix', #If args['fixed_matrix'] above is set to True, then this parameter determines where the fixed sensing matrix is saved or where the existing matrix is loaded from. 
     'matrix_type': 'sdnormal',  #type of random matrix
     'x_type': 'sdnormal',  #type of entries generated for sparse vector x. 
     'm': 5, #row dimension of A
@@ -24,14 +25,14 @@ args = {
     #---------------------------------------------------------------
     #General Alphazero Parameters
     'numIters': 10, #number of alphazero iterations performed. Each iteration consists of 1)playing numEps self play games, 2) retraining neural network
-    'numEps': 1000, #dictates how many self play games are played each iteration of the algorithm
+    'numEps': 100, #dictates how many self play games are played each iteration of the algorithm
     'maxlenOfQueue':10000, #dictates total number of game states saved(not games). 
     'numItersForTrainExamplesHistory': 3, #controls the size of trainExamplesHistory, which is a list of different iterationTrainExamples deques. 
     'checkpoint': os.getcwd() + '/training_data', #filepath for SAVING newly generated self play training data
     'load_training': False, #If set to True, then load latest batch of self play games for training. 
-    'load_folder_(folder)': os.getcwd() + '/training_data', #filepath for LOADING the latest set of training data
-    'load_folder_(filename)': 'best.pth.tar', #filename for LOADING the latest generated set of training data
-    'Arena': False, #determines whether model selection/arena is activated or not
+        'load_folder_(folder)': os.getcwd() + '/training_data', #filepath for LOADING the latest set of training data
+        'load_folder_(filename)': 'best.pth.tar', #filename for LOADING the latest generated set of training data. Currently, this must be saved as 'best.pth.tar'
+    'Arena': False, #determines whether model selection/arena is activated or not. Below options will not be run if this is set to False.
         'arenaCompare': 100, #number of games played in the arena to compare 2 networks pmcts and nmcts
         'updateThreshold': 0.55, #determines the percentage of games nmcts must win for us to update pmcts to nmcts
     #---------------------------------------------------------------
@@ -42,7 +43,7 @@ args = {
     'epochs': 10,   #number of training epochs. If There are K self play states, then epochs is roughly K/batch_size. Note further that K <= numEps*sparsity
     'batch_size': 2500, #dictates the batch_size when training 
     'num_features' : 2, #number of self-designed features used in the input
-    'load_nn_model' : False, #If set to True, load the best network (best.json and best.h5)
+    'load_nn_model' : True, #If set to True, load the best network (best.json and best.h5)
     'network_checkpoint' : os.getcwd() + '/network_checkpoint', #filepath for SAVING the temp neural network model/weights, checkpoint networks model/weights, and the best networks model/weights
     #features: True if we wish to use as a feature, False if we do not wish to use as a feature
     'x_l2' : True,      #solution to min_z||A_Sz - y||_2^2, where A_S is the submatrix of columns we have currently chosen
@@ -50,8 +51,8 @@ args = {
     #---------------------------------------------------------------
     #MCTS parameters
     'cpuct': 1, #controls the amount of exploration at each depth of MCTS tree.
-    'numMCTSSims': 500, #For each move, numMCTSSims is equal to the number of MCTS simulations in finding the next move during self play. 
-    'tempThreshold': 15,    #dictates when the MCTS starts returning deterministic polices (vector of 0 and 1's). See Coach.py for more details.
+    'numMCTSSims': 10, #For each move, numMCTSSims is equal to the number of MCTS simulations in finding the next move during self play. 
+    'tempThreshold': 5,    #dictates when the MCTS starts returning deterministic polices (vector of 0 and 1's). See Coach.py for more details.
     'gamma': 0.5, #note that reward for a terminal state is -||x||_0 - gamma*||A_S*x-y||_2^2. 
     'epsilon': 1e-5, #If x is the optimal solution to l2, and the residual of l2 regression ||A_Sx-y||_2^2 is less than epsilon, then the state corresponding to indices S is a terminal state in MCTS. 
 }

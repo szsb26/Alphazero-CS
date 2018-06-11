@@ -98,13 +98,18 @@ class Coach():
         It then pits the new neural network against the old one and accepts it
         only if it wins >= updateThreshold fraction of games.
         """
-        #IF A is fixed, then generate A here before loop below. Also, set arena_game_args.sensing_matrix to be equal to that of coach.game_args
+        #Generate a fixed sensing matrix if option is toggled to True.
+        #1)A is fixed. Also set arena_game_args.sensing_matrix to be equal to that of coach.game_args so the arena uses the same sensing matrix. 
+        #2)the folder which saves the fixed sensing matrix is empty
         if self.args['fixed_matrix'] == True:
-            self.game_args.generateSensingMatrix(self.args['m'], self.args['n'], self.args['matrix_type'])
-            self.arena_game_args.sensing_matrix = self.game_args.sensing_matrix
-            #Save the fixed matrix
-            self.game_args.save_Matrix(self.args['fixed_matrix_filepath'])
-
+            if self.args['load_existing_matrix'] == True:
+                self.game_args.sensing_matrix = np.load(self.args['fixed_matrix_filepath'] + '/sensing_matrix.npy')
+            else: #if not loading an existing matrix in self.args['fixed_matrix_filepath'], then generate a new sensing matrix of given type self.args['matrix_type']
+                self.game_args.generateSensingMatrix(self.args['m'], self.args['n'], self.args['matrix_type']) 
+                self.arena_game_args.sensing_matrix = self.game_args.sensing_matrix
+                #Save the fixed matrix
+                self.game_args.save_Matrix(self.args['fixed_matrix_filepath'])
+            
         for i in range(1, self.args['numIters']+1):
             print('------ITER ' + str(i) + '------')
             if not self.skipFirstSelfPlay or i>1: #default of self.skipFirstSelfPlay is False. If loading training from file then skipFirstSelfPlay is set to True. skipFirstSelfPlay allows us to load the latest nn_model with latest set of TrainingExamples
@@ -117,9 +122,9 @@ class Coach():
                 #-----------------------------------------------------
                 for eps in range(self.args['numEps']):
                     #Initialize a new game by setting A, x, y, and then execute a single game of self play with self.executeEpisode()
-                    if self.args['fixed_matrix'] == False:
+                    if self.args['fixed_matrix'] == False: #repeatedly generate sensing matrices if we are not fixing the sensing matrix. 
                         self.game_args.generateSensingMatrix(self.args['m'], self.args['n'], self.args['matrix_type']) #generate a new sensing matrix
-                    self.game_args.generateNewObsVec(self.args['x_type'], self.args['sparsity'])#generate a new observed vector y
+                    self.game_args.generateNewObsVec(self.args['x_type'], self.args['sparsity'])#generate a new observed vector y. This assumes a matrix has been loaded in self.game_args!!!
                     self.mcts = MCTS(self.game, self.nnet, self.args, self.game_args)#create new search tree for each game we play
                     iterationTrainExamples += self.executeEpisode() #Play a new game with newly generated y. iterationTrainExamples is a deque containing states each generated self play game
                 #-----------------------------------------------------
@@ -133,7 +138,8 @@ class Coach():
                 # save the iteration examples to the history 
                 #self.trainExamplesHistory is a list of deques, where each deque contains all the states from numEps number of self-play games
                 self.trainExamplesHistory.append(iterationTrainExamples)
-                
+            
+            #Jump to here on the first iteration if we loaded an existing file into self.trainExamplesHistory from method loadTrainExamples below.    
             if len(self.trainExamplesHistory) > self.args['numItersForTrainExamplesHistory']:
                 print("len(trainExamplesHistory) =", len(self.trainExamplesHistory), " => remove the oldest trainExamples")
                 self.trainExamplesHistory.pop(0)
@@ -175,7 +181,7 @@ class Coach():
                     self.nnet.save_checkpoint(folder=self.args['network_checkpoint'], filename='best')
             #-----------------------------------------------------------------
             
-            else:
+            else: #If we do not activate Arena, then all we do is just train the network, rewrite best, and write a new file 'nnet_checkpoint' + str(i-1).  
                 print('TRAINING NEW NEURAL NETWORK...')
                 trainExamples = self.nnet.constructTraining(trainExamples)
                 self.nnet.train(trainExamples[0], trainExamples[1])          
