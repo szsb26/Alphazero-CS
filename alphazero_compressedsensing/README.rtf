@@ -33,4 +33,7 @@ BUG FIXES:\
 (June 4, 2018)\
 -added code in matrix A generation to normalize the columns. This is one of the criteria for using OMP on a sensing matrix. \
 \
+(June 14, 2018)\
+-changed self.termreward = -np.linalg.norm(Game_args.obs_vector)**2 \'97\'97\'97> self.termreward = -self.args[\'91gamma\'92]*np.linalg.norm(Game_args.obs_vector)**2 in CSState.py. Forgot to multiply by scaling factor gamma for the reward received when NN chooses the stopping action at the initial state.\
+\
 }

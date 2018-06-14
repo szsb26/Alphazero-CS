@@ -39,7 +39,7 @@ class NetArch():
             
         #Define the two outputs, where activation is softmax and identity, since reward in mcts is
         #sparsity + l2 regularization term.
-        self.p_as = Dense(self.args['n']+1, activation = 'softmax', name = 'p_as')(x) 
+        self.p_as = Dense(self.args['n']+1, activation = 'softmax', name = 'p_as')(x)#note the + 1 is for choosing the stopping action.
         self.v = Dense(1, name = 'v')(x)
         
         self.model = Model(inputs = Inputs, outputs = [self.p_as, self.v])

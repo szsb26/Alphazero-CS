@@ -68,16 +68,17 @@ class State():
             A_S = Game_args.sensing_matrix[:,S]
             x = np.linalg.lstsq(A_S, Game_args.obs_vector)
         
-            if not x[1]: #Case in which residual returns an empty size 1 array, which implies there is an exact solution or rank of matrix less than n(num of columns)
+            if not x[1]: #Case in which residual(x[1]) returns an empty size 1 array, which implies there is an exact solution or rank of matrix less than n(num of columns)
                 self.termreward = - len(self.col_indices)
-            elif len(self.col_indices) == Game_args.game_iter or self.action_indices[-1] == 1 or x[1][0] < args['epsilon']:
+            elif len(self.col_indices) == Game_args.game_iter or self.action_indices[-1] == 1 or x[1][0] < args['epsilon']: #Game_args.game_iter is set every time we call Game_args.generateNewObsVec
                 self.termreward = - len(self.col_indices) - args['gamma']*x[1][0]
             else:
                 self.termreward = 0 #not terminal state
-        elif self.action_indices[-1] == 1: #If self.col_indices is an empty list, but stopping action was taken, then reward is exactly equal to the negative of squared norm of y
-            self.termreward = -np.linalg.norm(Game_args.obs_vector)**2
+        elif self.action_indices[-1] == 1: #If self.col_indices is an empty list, but stopping action was taken, then reward is exactly equal to the negative of squared norm of y * gamma
+            self.termreward = -args['gamma']*np.linalg.norm(Game_args.obs_vector)**2
             
-        else:#If self.col_indices is an empty list, and self.action_indices[-1] != 1, then we are not at a terminal state. Set self.terreward to zero.
+        #Looking at Coach.py, the line below should never be executed, because for the initial state, we do not call game.getGameEnded(state, args, game_args)
+        else:#If self.col_indices is an empty list, and self.action_indices[-1] != 1, then this implies we are at initial state. Set self.termreward to zero.
             self.termreward = 0
             
     

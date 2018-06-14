@@ -137,7 +137,7 @@ class MCTS():
         valids = self.Vs[s] #retrieve numpy vector of valid moves
         cur_best = -float('inf') #temp variable which holds the current highest UCB value
         best_act = -1 #temp variable which holds the current best action with largest UCB. Initialized to -1.
-        for a in range(self.game.getActionSize(self.args)): #iterate over all possible actions. WHY NOT OVER ALL VALID ACTIONS INSTEAD?
+        for a in range(self.game.getActionSize(self.args)): #iterate over all possible actions. 
             if valids[a]:
                 if (s,a) in self.Qsa:
                     u = self.Qsa[(s,a)] + self.args['cpuct']*self.Ps[s][a]*math.sqrt(self.Ns[s])/(1+self.Nsa[(s,a)]) #note here that self.Ns[s] is number of times s 

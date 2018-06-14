@@ -23,6 +23,7 @@ class Game_args(): #We save the args in Game_args class here because later on we
             
         x = np.zeros(self.sensing_matrix.shape[1])
         rand_sparsity = np.random.randint(1,sparsity)
+        #self.game_iter = rand_sparsity
         if entry_type == 'sdnormal':
             x[0:rand_sparsity] = np.random.normal(0, 1, rand_sparsity)
             np.random.shuffle(x)

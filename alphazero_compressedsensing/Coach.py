@@ -60,7 +60,7 @@ class Coach():
             #args['numMCTSSims']
             pi = self.mcts.getActionProb(state, temp=temp)
             state.pi_as = pi #update the label pi_as since getActionProb does not do this
-            #Construct the States_List and Y
+            #Construct the States_List and Y. Append the state we are at into the states list. 
             states.append(state)
             #choose a random action (integer) with prob in pi.
             action = np.random.choice(len(pi), p=pi)
@@ -75,9 +75,9 @@ class Coach():
             #print('The reward for the next state ' + str(state.col_indices) + ' is: ' + str(r))
             #-----------------------------
             
-            #return breaks out of the while loop. If r not equal to 0, that means the state we are
-            #on is a terminal state, which implies we should propagate the rewards up to every 
-            #state in states
+            #return breaks out of the while loop, and we only break if we are on a state which returns nonzero reward.
+            # If r not equal to 0, that means the state we are on is a terminal state,
+            #which implies we should propagate the rewards up to every state in states
             if r!=0:
                 states.append(state) #append the last state with nonzero reward. Note that p_as of the last terminal state is a vector of zeros. Refer to the default constructor of the State object
                 for state in states:
