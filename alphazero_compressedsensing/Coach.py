@@ -43,7 +43,7 @@ class Coach():
         state = self.game.getInitBoard(self.args, self.game_args) #State Object
         action_size = self.game.getActionSize(self.args)
         states = [] #will convert all states into X using NNet.convertStates
-        trainExamples = []
+        #trainExamples = [] (dont need this line)
         
         #After episodeStep number of played moves into a single game (>= tempTHreshold), MCTS.getActionProb
         #starts returning deterministic policies pi. Hence, the action chosen to get the next state
@@ -59,10 +59,11 @@ class Coach():
             #Note that MCTS.getActionProb runs a fixed number of MCTS.search determined by 
             #args['numMCTSSims']
             pi = self.mcts.getActionProb(state, temp=temp)
-            state.pi_as = pi #update the label pi_as since getActionProb does not do this
+            state.pi_as = pi #update the label pi_as since getActionProb does not do this. THIS IS NOT THE OUTPUT OF NN!!
             #Construct the States_List and Y. Append the state we are at into the states list. 
             states.append(state)
-            #choose a random action (integer) with prob in pi.
+            #choose a random action (integer) with prob in pi. Note that pi is either a vector of 0 and 1s or a probability distribution. This depends on temp
+            #np.random.choice(len(pi), p=pi) generates an integer in {0,...,len(pi)-1} according to distribution p
             action = np.random.choice(len(pi), p=pi)
             #FOR TESTING------------------
             #print('The next action taken is: ' + str(action))
@@ -79,7 +80,7 @@ class Coach():
             # If r not equal to 0, that means the state we are on is a terminal state,
             #which implies we should propagate the rewards up to every state in states
             if r!=0:
-                states.append(state) #append the last state with nonzero reward. Note that p_as of the last terminal state is a vector of zeros. Refer to the default constructor of the State object
+                states.append(state) #append the last state with nonzero reward. Note that pi_as of the last terminal state is a vector of zeros. Refer to the default constructor of the State object
                 for state in states:
                     #compute state.feature_dic
                     state.compute_x_S_and_res(self.args, self.game_args)
@@ -104,6 +105,7 @@ class Coach():
         if self.args['fixed_matrix'] == True:
             if self.args['load_existing_matrix'] == True:
                 self.game_args.sensing_matrix = np.load(self.args['fixed_matrix_filepath'] + '/sensing_matrix.npy')
+                self.arena_game_args.sensing_matrix = np.load(self.args['fixed_matrix_filepath'] + '/sensing_matrix.npy')
             else: #if not loading an existing matrix in self.args['fixed_matrix_filepath'], then generate a new sensing matrix of given type self.args['matrix_type']
                 self.game_args.generateSensingMatrix(self.args['m'], self.args['n'], self.args['matrix_type']) 
                 self.arena_game_args.sensing_matrix = self.game_args.sensing_matrix

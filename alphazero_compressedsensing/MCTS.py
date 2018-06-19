@@ -19,10 +19,10 @@ class MCTS():
         self.Ns = {}        # stores #times board s was visited, which is equivalent to sum_b(self.Nsa[(s,b)])
         self.Ps = {}        # stores initial policy (returned by neural net). In our problem, the policy is a vector whose size is equal to #columns of A. 
 
-        self.Es = {}        # stores game.getGameEnded ended for board s. IOW, stores all states and their rewards. 0 if state not terminal, and true reward if state is terminal.
+        self.Es = {}        # stores game.getGameEnded ended for board s. IOW, stores all states and their terminal rewards. 0 if state not terminal, and true reward if state is terminal.
         self.Vs = {}        # stores game.getValidMoves for board s
 
-    def getActionProb(self, canonicalBoard, temp=1):
+    def getActionProb(self, canonicalBoard, temp=1): #temp = 1, the default option, has getActionProb return a probability distribution. The next action is chosen at random from this distribution. 
         """
         This function performs numMCTSSims simulations of MCTS(expands tree numMCTSSims times) starting from
         canonicalBoard. We will be using this function to do self play. Uses search method below
@@ -32,19 +32,32 @@ class MCTS():
                    proportional to Nsa[(s,a)]**(1./temp)
         """
         #do numMCTSSims number of MCTS searches/simulations
-        #print(self.game_args.sensing_matrix)
-        #print(self.game_args.obs_vector)
-        #print(canonicalBoard.action_indices)
+        #self.search updates the all the self variables above
         for i in range(self.args['numMCTSSims']):
             #FOR TESTING---------------------  
             #print(i)
             #--------------------------------
             self.search(canonicalBoard)
         
+        print('')
+        print('MCTS STATISTICS')
+        #print('self.Qsa: ' + str(self.Qsa))
+        print('self.Nsa: ' + str(self.Nsa))
+        print('self.Ns: ' + str(self.Ns))
+        print('self.Ps: ' + str(self.Ps))
+        #print('self.Es: ' + str(self.Es))
+        #print('self.Vs: ' + str(self.Vs))
+        print('')
+        
         #Count the number of times an action was taken from the canonicalBoard state as root node
         #and construct a list of how many times each action was taken
         s = self.game.stringRepresentation(canonicalBoard)
+        #counts is a list of integer values
+        #Namely, it contains values for number of times action a was investigated given state s(canonicalBoard from above)
+        #otherwise, if an action was never investigated, then set it as 0. 
+        #counts should sum to numMCTSsims 
         counts = [self.Nsa[(s,a)] if (s,a) in self.Nsa else 0 for a in range(self.game.getActionSize(self.args))]
+        print('current counts is: ' + str(counts))
         
         if temp==0:
             #return the index of the list counts with largest value
@@ -53,13 +66,15 @@ class MCTS():
             probs = [0]*len(counts)
             probs[bestA]=1
             #probs is a zero vector with a single 1 in bestA index.
-            return probs
+            print('probs is: ' + str(probs))
+            return probs #here probs is a vector of 0 and 1s!!!
         
         #1./temp is a remnant of Python 2. For ex 1/5 = 0, but 1./5 = 0.2
         counts = [x**(1./temp) for x in counts]
         probs = [x/float(sum(counts)) for x in counts]
+        print('probs is: ' + str(probs))
         #returns a probability vector with floating values
-        return probs
+        return probs #here probs is a vector which sums to 1!!!!
 
 
     def search(self, canonicalBoard): 
@@ -74,10 +89,6 @@ class MCTS():
         outcome is propogated up the search path. The values of Ns, Nsa, Qsa are
         updated.
 
-        NOTE: the return values are the negative of the value of the current
-        state. This is done since v is in [-1,1] and if v is the value of a
-        state for the current player, then its value is -v for the other player.
-
         Returns:
             v: the negative of the value of the current canonicalBoard
         """
@@ -90,7 +101,7 @@ class MCTS():
         #as the number of visits increases, the UCB for every action taken up to that terminal node will decrease(Nsa increases, where s is the node leading up to terminal node, so UCB decreases).
         #Since UCB decreases, this allows exploration of other actions. 
         if s not in self.Es: #if s is not in self.Es, hash s into Es and determine whether s is a terminal state or not. 
-            self.Es[s] = self.game.getGameEnded(canonicalBoard, self.args, self.game_args) #game.getGameEnded returns either -sparsity + ||A_Sx-y||_2^2 or 0. Note that once getGameEnded is called, canonicalBoard.termreward is set.
+            self.Es[s] = self.game.getGameEnded(canonicalBoard, self.args, self.game_args) #game.getGameEnded returns either -sparsity + gamma*||A_Sx-y||_2^2 or 0. Note that once getGameEnded is called, canonicalBoard.termreward is set.
         if self.Es[s]!=0: #Now that we have hashed s into self.Es, check whether the reward returned above is 0 or not. If not zero, return the computed terminal value from getGameEnded above and search stops.
             return self.Es[s]
         #----------------------------------------------------------------------
@@ -104,7 +115,7 @@ class MCTS():
             # leaf node
             #Prepare canonicalBoard for feeding into NN
             
-            #COMPUTE self.feature_dic and compute NN representation
+            #COMPUTE self.feature_dic and compute NN representation so we can call nnet.predict below
             canonicalBoard.compute_x_S_and_res(self.args, self.game_args)
             canonicalBoard.converttoNNInput()
                         

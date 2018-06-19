@@ -6,7 +6,9 @@ from keras.optimizers import Adam
 class NNetWrapper(): 
     def __init__(self, args): 
         self.args = args
-        self.nnet = NetArch(args) #self.nnet is a NetArch object
+        #self.nnet is a NetArch object.
+        #NetArch object contains self variables self.args, self.p_as, self.v, and most importantly, self.model
+        self.nnet = NetArch(args) 
     
     def constructTraining(self, states): #this method is used in Coach.py
     #INPUT: a list of state objects which have values for self.feature_dic, self.p_as, and self.z
