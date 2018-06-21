@@ -1,0 +1,211 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1504\cocoasubrtf830
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fnil\fcharset0 Menlo-Regular;}
+{\colortbl;\red255\green255\blue255;\red255\green255\blue255;\red0\green0\blue0;}
+{\*\expandedcolortbl;;\cssrgb\c100000\c100000\c100000;\cssrgb\c0\c0\c0;}
+\margl1440\margr1440\vieww10800\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 \
+ARGUMENTS/EXPERIMENT PARAMETERS:\
+args = \{\
+    #Compressed Sensing Parameters, Ax = y, where A is of size m by n\
+    'fixed_matrix': True, #fixes a single matrix across entire alphazero algorithm. If set to True, then self play games generated in each iteration have different sensing matrices. The below options will not run if this is set to False.\
+        'load_existing_matrix': True, #If we are using a fixed_matrix, then this option toggles whether to load an existing matrix from args['fixed_matrix_filepath'] or generate a new one. If loading an existing matrix, the matrix must be saved as name 'sensing_matrix.npy'\
+            'matrix_type': 'sdnormal',  #type of random matrix generated if(assuming we are not loading existing matrix)\
+    'x_type': 'uniform01',  #type of entries generated for sparse vector x\
+    'm': 7, #row dimension of A\
+    'n':15, #column dimension of A\
+    'sparsity':7, #dictates the maximum sparsity of x when generating the random vector x. Largest number of nonzeros of x is sparsity-1. sparsity cannot be greater than m above. \
+    'fixed_matrix_filepath': os.getcwd() + '/fixed_sensing_matrix', #If args['fixed_matrix'] above is set to True, then this parameter determines where the fixed sensing matrix is saved or where the existing matrix is loaded from. \
+    #---------------------------------------------------------------\
+    #General Alphazero Training Parameters\
+    'numIters': 100, #number of alphazero iterations performed. Each iteration consists of 1)playing numEps self play games, 2) retraining neural network\
+    'numEps': 10000, #dictates how many self play games are played each iteration of the algorithm\
+    'maxlenOfQueue':10000, #dictates total number of game states saved(not games). \
+    'numItersForTrainExamplesHistory': 3, #controls the size of trainExamplesHistory, which is a list of different iterationTrainExamples deques. \
+    'checkpoint': os.getcwd() + '/training_data', #filepath for SAVING newly generated self play training data\
+    'load_training': False, #If set to True, then load latest batch of self play games for training. \
+        'load_folder_(folder)': os.getcwd() + '/training_data', #filepath for LOADING the latest set of training data\
+        'load_folder_(filename)': 'best.pth.tar', #filename for LOADING the latest generated set of training data. Currently, this must be saved as 'best.pth.tar'\
+    'Arena': False, #determines whether model selection/arena is activated or not. Below options will not be run if this is set to False.\
+        'arenaCompare': 100, #number of games played in the arena to compare 2 networks pmcts and nmcts\
+        'updateThreshold': 0.55, #determines the percentage of games nmcts must win for us to update pmcts to nmcts\
+    #---------------------------------------------------------------\
+    #NN Parameters\
+    'lr': 0.001,    #learning rate of NN\
+    'num_layers': 2,    #number of hidden layers after the 1st hidden layer\
+    'neurons_per_layer':200,    #number of neurons per hidden layer\
+    'epochs': 10,   #number of training epochs. If There are K self play states, then epochs is roughly K/batch_size. Note further that K <= numEps*sparsity. epochs determines the number of times weights are updated.\
+    'batch_size': 50000, #dictates the batch_size when training \
+    'num_features' : 2, #number of self-designed features used in the input\
+    'load_nn_model' : True, #If set to True, load the best network (best_model.json and best_weights.h5)\
+    'network_checkpoint' : os.getcwd() + '/network_checkpoint', #filepath for SAVING the temp neural network model/weights, checkpoint networks model/weights, and the best networks model/weights\
+    #features: True if we wish to use as a feature, False if we do not wish to use as a feature\
+    'x_l2' : True,      #solution to min_z||A_Sz - y||_2^2, where A_S is the submatrix of columns we have currently chosen\
+    'lambda' : True,    #the vector of residuals, lambda = A^T(A_Sx-y), where x is the optimal solution to min_z||A_Sz - y||_2^2\
+    #---------------------------------------------------------------\
+    #MCTS parameters\
+    'cpuct': 1, #controls the amount of exploration at each depth of MCTS tree.\
+    'numMCTSSims': 500, #For each move, numMCTSSims is equal to the number of MCTS simulations in finding the next move during self play. \
+    'tempThreshold': 5,    #dictates when the MCTS starts returning deterministic polices (vector of 0 and 1's). See Coach.py for more details.\
+    'gamma': 100, #note that reward for a terminal state is -||x||_0 - gamma*||A_S*x-y||_2^2. The smaller gamma is, the more likely algorithm is going to choose stopping action earlier(when ||x||_0 is small). gamma enforces how much we want to enforce Ax is close to y. We need gamma large enough!!!\
+    'epsilon': 1e-5, #If x is the optimal solution to l2, and the residual of l2 regression ||A_Sx-y||_2^2 is less than epsilon, then the state corresponding to indices S is a terminal state in MCTS. \
+\}\
+\
+\
+\
+RESULTS: bootstrapNN with MCTS    vs.  OMP\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f1\fs22 \cf2 \cb3 \CocoaLigature0 ---------------------------------------------------\
+Recovery of Alphazero is: \
+[ 0.     0.928  0.787  0.545  0.258  0.071  0.01 ]\
+Recovery of OMP is: \
+[ 0.     1.     0.887  0.605  0.281  0.078  0.017]\
+----------------------------------------------------\
+
+\f0\fs24 \cf0 \cb1 \CocoaLigature1 \
+bootstrapNN ONLY vs. OMP\
+
+\f1\fs22 \cf2 \cb3 \CocoaLigature0 [ 0.     1.     0.856  0.572  0.235  0.066  0.009]\
+[ 0.     1.     0.887  0.605  0.281  0.078  0.017]\
+
+\f0\fs24 \cf0 \cb1 \CocoaLigature1 \
+added condition that nodes are also terminal states if they reach the designated sparsity s. However, not setting this condition should not matter, because the more columns we choose, the smaller ||A_Sx*-y|| tends to be, and the reward will instead be dominated by ||x_S||_0 instead, which will be smaller than the true solution, which has a smaller sparsity. Using 500 MCTS sims and limiting to sparsity 1 and 2, we have:\
+\
+
+\f1\fs22 \cf2 \cb3 \CocoaLigature0 ---------------------------------------------------\
+Recovery of Alphazero is: \
+[ 0.     0.904  0.732  0.     0.     0.     0.   ]\
+Recovery of OMP is: \
+[ 0.     1.     0.887  0.     0.     0.     0.   ]\
+----------------------------------------------------
+\f0\fs24 \cf0 \cb1 \CocoaLigature1 \
+\
+The reason we are getting worse performance is mainly due to a combination of 2 reasons:\
+	1)Choice of gamma. We need to choose a large enough gamma. However, this may imply that we may need to increase number of MCTSsims or cpuct. \
+	2)The stopping condition\
+\
+examples:\
+
+\f1\fs22 \cf2 \cb3 \CocoaLigature0 FAILED RECOVERY: (y,x) ITER 984:///////////////////////////////////////////////\
+The original signal x is: [ 0.21258321  0.03272713  0.          0.          0.          0.          0.\
+  0.          0.          0.          0.          0.          0.          0.\
+  0.        ]\
+\
+STATE 0 statistics:----------------------------------\
+action_indices: [ 0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.]\
+columns_taken: []\
+feature_dic: \
+\{'x_l2': array([ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,\
+        0.,  0.]), 'col_res_IP': array([ 0.21024492,  0.01753852,  0.06497287,  0.08804908,  0.11807898,\
+        0.11391921,  0.03648496,  0.06766945,  0.08149093,  0.0708975 ,\
+        0.03499325,  0.01553307,  0.07530316,  0.0070172 ,  0.09061118])\}\
+z(the true observed reward from final terminal state): -1.10655972094\
+N(s,a) of each action: [480, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 2, 1, 1]\
+final prob. dist. output by MCTS: [0.9619238476953907, 0.004008016032064128, 0.002004008016032064, 0.002004008016032064, 0.002004008016032064, 0.002004008016032064, 0.002004008016032064, 0.002004008016032064, 0.002004008016032064, 0.002004008016032064, 0.004008016032064128, 0.004008016032064128, 0.002004008016032064, 0.004008016032064128, 0.002004008016032064, 0.002004008016032064]\
+/////////////////////////////////////////////////////////////\
+\
+STATE 1 statistics:----------------------------------\
+action_indices: [ 1.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.]\
+columns_taken: [0]\
+feature_dic: \
+\{'x_l2': array([ 0.21024492,  0.        ,  0.        ,  0.        ,  0.        ,\
+        0.        ,  0.        ,  0.        ,  0.        ,  0.        ,\
+        0.        ,  0.        ,  0.        ,  0.        ,  0.        ]), 'col_res_IP': array([  1.86342343e-17,   3.25600608e-02,   1.06848729e-02,\
+         1.86803643e-02,   8.06979445e-03,   5.04454755e-03,\
+         7.61603831e-03,   2.01715996e-02,   1.25829413e-02,\
+         1.32668938e-02,   1.37702747e-02,   3.87915854e-03,\
+         7.13590387e-03,   3.73231344e-03,   1.31889966e-02])\}\
+z(the true observed reward from final terminal state): -1.10655972094\
+N(s,a) of each action: [0, 27, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 938]\
+final prob. dist. output by MCTS: [0.0, 0.027579162410623085, 0.0010214504596527069, 0.0020429009193054137, 0.0010214504596527069, 0.0010214504596527069, 0.0010214504596527069, 0.0010214504596527069, 0.0010214504596527069, 0.0010214504596527069, 0.0010214504596527069, 0.0010214504596527069, 0.0010214504596527069, 0.0010214504596527069, 0.0010214504596527069, 0.958120531154239]\
+/////////////////////////////////////////////////////////////\
+\
+\
+\
+\
+\
+FAILED RECOVERY: (y,x) ITER 963:///////////////////////////////////////////////\
+The original signal x is: [ 0.          0.          0.          0.          0.          0.          0.\
+  0.06165341  0.          0.          0.          0.          0.          0.\
+  0.        ]\
+\
+STATE 0 statistics:----------------------------------\
+action_indices: [ 0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.]\
+columns_taken: []\
+feature_dic: \
+\{'x_l2': array([ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,\
+        0.,  0.]), 'col_res_IP': array([ 0.02575901,  0.03984095,  0.02818235,  0.00171392,  0.0200689 ,\
+        0.00964409,  0.02112397,  0.06165341,  0.04882275,  0.02114506,\
+        0.02995119,  0.01108241,  0.00175427,  0.0335    ,  0.02933002])\}\
+z(the true observed reward from final terminal state): -0.380114331849\
+N(s,a) of each action: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]\
+final prob. dist. output by MCTS: [0.02040816326530612, 0.02040816326530612, 0.02040816326530612, 0.02040816326530612, 0.02040816326530612, 0.02040816326530612, 0.02040816326530612, 0.1836734693877551, 0.02040816326530612, 0.02040816326530612, 0.02040816326530612, 0.02040816326530612, 0.02040816326530612, 0.02040816326530612, 0.02040816326530612, 0.5306122448979592]\
+/////////////////////////////////////////////////////////////\
+\
+STATE 1 statistics:----------------------------------\
+action_indices: [ 0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  1.]\
+columns_taken: []\
+feature_dic: \
+\{'x_l2': array([ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,\
+        0.,  0.]), 'col_res_IP': array([ 0.02575901,  0.03984095,  0.02818235,  0.00171392,  0.0200689 ,\
+        0.00964409,  0.02112397,  0.06165341,  0.04882275,  0.02114506,\
+        0.02995119,  0.01108241,  0.00175427,  0.0335    ,  0.02933002])\}\
+z(the true observed reward from final terminal state): -0.380114331849\
+N(s,a) of each action: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]\
+final prob. dist. output by MCTS: [ 0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.]\
+/////////////////////////////////////////////////////////////\
+\
+\
+\
+\
+\
+\
+STATE 0 statistics:----------------------------------\
+action_indices: [ 0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.]\
+columns_taken: []\
+feature_dic: \
+\{'x_l2': array([ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,\
+        0.,  0.]), 'col_res_IP': array([ 0.08816597,  0.82909571,  0.30911801,  0.46655291,  0.17200803,\
+        0.11661024,  0.19339287,  0.52678685,  0.32257889,  0.23823918,\
+        0.33701826,  0.08752557,  0.23491635,  0.05711572,  0.36004189])\}\
+z(the true observed reward from final terminal state): -2.74925884528\
+N(s,a) of each action: [1, 484, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]\
+final prob. dist. output by MCTS: [0.002004008016032064, 0.969939879759519, 0.002004008016032064, 0.002004008016032064, 0.002004008016032064, 0.002004008016032064, 0.002004008016032064, 0.002004008016032064, 0.002004008016032064, 0.002004008016032064, 0.002004008016032064, 0.002004008016032064, 0.002004008016032064, 0.002004008016032064, 0.002004008016032064, 0.002004008016032064]\
+/////////////////////////////////////////////////////////////\
+\
+STATE 1 statistics:----------------------------------\
+action_indices: [ 0.  0.  1.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.]\
+columns_taken: [2]\
+feature_dic: \
+\{'x_l2': array([ 0.        ,  0.        ,  0.30911801,  0.        ,  0.        ,\
+        0.        ,  0.        ,  0.        ,  0.        ,  0.        ,\
+        0.        ,  0.        ,  0.        ,  0.        ,  0.        ]), 'col_res_IP': array([  2.30717679e-02,   7.20226023e-01,   1.04676363e-16,\
+         4.29923432e-01,   2.40117123e-01,   2.75251138e-02,\
+         1.70306617e-01,   3.85486119e-01,   3.16692333e-01,\
+         2.51408790e-01,   4.76389239e-01,   7.00267478e-02,\
+         1.85595881e-01,   5.07309449e-02,   8.00937872e-02])\}\
+z(the true observed reward from final terminal state): -2.74925884528\
+N(s,a) of each action: [1, 486, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]\
+final prob. dist. output by MCTS: [0.002, 0.972, 0.0, 0.002, 0.002, 0.002, 0.002, 0.002, 0.002, 0.002, 0.002, 0.002, 0.002, 0.002, 0.002, 0.002]\
+/////////////////////////////////////////////////////////////\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 \cb1 \CocoaLigature1 \
+'numMCTSSims': 1000\
+'tempThreshold': 0 (This means take the argmax of the probability dist. that MCTS outputs instead of randomly choosing an action according to that dist.)\
+\'91#Alphazero.game_args.game_iter = s commented out (This option activated turns all states with s columns taken into terinal states in the MCTS tree)\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f1\fs22 \cf2 \cb3 \CocoaLigature0 ---------------------------------------------------\
+Recovery of Alphazero is: \
+[0.    0.93  0.836 0.624 0.332 0.086 0.014]\
+Recovery of OMP is: \
+[0.    1.    0.887 0.605 0.281 0.078 0.017]\
+----------------------------------------------------\
+
+\f0\fs24 \cf0 \cb1 \CocoaLigature1 \
+-It is observed here that by increasing MCTS sims to 1000, we have higher accuracy for sparsities 3,4,5. \
+\
+}
