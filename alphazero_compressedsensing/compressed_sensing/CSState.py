@@ -16,7 +16,7 @@ class State():
         self.termreward = None
         #labels(if there are any)
         self.pi_as = np.zeros(actions_indicator.size)
-        self.z = None
+        self.z = None #The true observed terminal reward
         #NN_input format for prediction(dont need labels for states we wish to predict)
         self.nn_input = None
         

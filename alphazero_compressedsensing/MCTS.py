@@ -17,7 +17,7 @@ class MCTS():
         self.Qsa = {}       # stores Q values for s,a (as defined in the paper)
         self.Nsa = {}       # stores #times edge s,a was visited
         self.Ns = {}        # stores #times board s was visited, which is equivalent to sum_b(self.Nsa[(s,b)])
-        self.Ps = {}        # stores initial policy (returned by neural net). In our problem, the policy is a vector whose size is equal to #columns of A. 
+        self.Ps = {}        # stores initial policy (returned by neural net). In our problem, the policy is a vector whose size is equal to #columns of A + 1 (+1 for the stopping action). 
 
         self.Es = {}        # stores game.getGameEnded ended for board s. IOW, stores all states and their terminal rewards. 0 if state not terminal, and true reward if state is terminal.
         self.Vs = {}        # stores game.getValidMoves for board s
@@ -39,15 +39,15 @@ class MCTS():
             #--------------------------------
             self.search(canonicalBoard)
         
-        print('')
-        print('MCTS STATISTICS')
+        #print('')
+        #print('MCTS STATISTICS after conducting numMCTSSims... for current state ' + str(canonicalBoard.action_indices))
         #print('self.Qsa: ' + str(self.Qsa))
-        print('self.Nsa: ' + str(self.Nsa))
-        print('self.Ns: ' + str(self.Ns))
-        print('self.Ps: ' + str(self.Ps))
+        #print('self.Nsa: ' + str(self.Nsa))
+        #print('self.Ns: ' + str(self.Ns))
+        #print('self.Ps: ' + str(self.Ps))
         #print('self.Es: ' + str(self.Es))
         #print('self.Vs: ' + str(self.Vs))
-        print('')
+        #print('')
         
         #Count the number of times an action was taken from the canonicalBoard state as root node
         #and construct a list of how many times each action was taken
@@ -57,7 +57,7 @@ class MCTS():
         #otherwise, if an action was never investigated, then set it as 0. 
         #counts should sum to numMCTSsims 
         counts = [self.Nsa[(s,a)] if (s,a) in self.Nsa else 0 for a in range(self.game.getActionSize(self.args))]
-        print('current counts is: ' + str(counts))
+        #print('current counts is: ' + str(counts))
         
         if temp==0:
             #return the index of the list counts with largest value
@@ -66,13 +66,13 @@ class MCTS():
             probs = [0]*len(counts)
             probs[bestA]=1
             #probs is a zero vector with a single 1 in bestA index.
-            print('probs is: ' + str(probs))
+            #print('MCTS probability dist. of next move is: ' + str(probs))
             return probs #here probs is a vector of 0 and 1s!!!
         
         #1./temp is a remnant of Python 2. For ex 1/5 = 0, but 1./5 = 0.2
         counts = [x**(1./temp) for x in counts]
         probs = [x/float(sum(counts)) for x in counts]
-        print('probs is: ' + str(probs))
+        #print('MCTS probability dist. of next move is: ' + str(probs))
         #returns a probability vector with floating values
         return probs #here probs is a vector which sums to 1!!!!
 
@@ -90,7 +90,7 @@ class MCTS():
         updated.
 
         Returns:
-            v: the negative of the value of the current canonicalBoard
+            v: the negative of the value of the current canonicalBoard. 
         """
         #BEGIN SEARCH ON GAME STATE canonicalBoard. canonicalBoard is root of MCTS tree
         s = self.game.stringRepresentation(canonicalBoard)#get the string representation of the state canonicalBoard in the game and save as s. Required for hashing in steps below:
@@ -100,10 +100,11 @@ class MCTS():
         #2)Note that terminal states are NOT expanded, so it is conceivable that MCTS search may search the same terminal node more than once. However,  
         #as the number of visits increases, the UCB for every action taken up to that terminal node will decrease(Nsa increases, where s is the node leading up to terminal node, so UCB decreases).
         #Since UCB decreases, this allows exploration of other actions. 
+        #3)terminal states are forever leaves.
         if s not in self.Es: #if s is not in self.Es, hash s into Es and determine whether s is a terminal state or not. 
-            self.Es[s] = self.game.getGameEnded(canonicalBoard, self.args, self.game_args) #game.getGameEnded returns either -sparsity + gamma*||A_Sx-y||_2^2 or 0. Note that once getGameEnded is called, canonicalBoard.termreward is set.
-        if self.Es[s]!=0: #Now that we have hashed s into self.Es, check whether the reward returned above is 0 or not. If not zero, return the computed terminal value from getGameEnded above and search stops.
-            return self.Es[s]
+            self.Es[s] = self.game.getGameEnded(canonicalBoard, self.args, self.game_args) #game.getGameEnded returns either -alpha||x_S||_0 + gamma*||A_Sx-y||_2^2 or 0. Note that once getGameEnded is called, canonicalBoard.termreward is set.
+        if self.Es[s]!=0: #Now that we have hashed s into self.Es, check whether the reward returned above is 0 or not. If not zero, return the true terminal reward from getGameEnded above and search stops.
+            return self.Es[s] #FIRST RETURN. If we arrived at a terminal node, then we return the TRUE REWARD instead of the predicted v of the neural network. 
         #----------------------------------------------------------------------
         
         #-------------IF s IS A LEAF, THEN:---------------------
@@ -137,7 +138,7 @@ class MCTS():
 
             self.Vs[s] = valids #Since s is a leaf, store the newly found valid moves and set amount of times s was visited as zero.
             self.Ns[s] = 0
-            return v
+            return v #SECOND RETURN
         #--------------------------------------------------------
         
         #-----------IF CURRENT NODE s IS NOT A LEAF, THEN CONTINUE SEARCH------------------------
@@ -154,32 +155,28 @@ class MCTS():
                     u = self.Qsa[(s,a)] + self.args['cpuct']*self.Ps[s][a]*math.sqrt(self.Ns[s])/(1+self.Nsa[(s,a)]) #note here that self.Ns[s] is number of times s 
                     #was visited. Note that self.Ns[s] = sum over b of self.Nsa[(s,b)], so the equation above is equal to surag nair's notes.
                 else:
-                    u = self.args['cpuct']*self.Ps[s][a]*math.sqrt(self.Ns[s] + EPS)     # Q = 0 ?
+                    u = self.args['cpuct']*self.Ps[s][a]*math.sqrt(self.Ns[s] + EPS)     # Q = 0 ? This line occurs if (s,a) is not in self.Qsa, which means that if we take action a, then the next node next_s must be a leaf. This (s,a) will be added to self.Qsa below and be assigned value of v.
 
                 if u > cur_best: #because this is equivalent to taking the max, this is why our rewards are negative!!!!!
                     cur_best = u
                     best_act = a
 
         a = best_act #define action with highest UCB computed above as a. a is chosen over valids. Note that best_act is a single action we take when traversing a single depth of MCTS tree.
-        #FOR TESTING---------------------------
-        #print('The action with highest UCB is: ' + str(a)) 
-        #--------------------------------------
         next_s = self.game.getNextState(canonicalBoard, a) #returns next board state(game object)
-        #next_s = self.game.getCanonicalForm(next_s, next_player) #canonical form does not matter for one player games. This line may be unnecessary.
 
         v = self.search(next_s) #traverse from root to a leaf or terminal node using recursive search. 
-        
-        #because we recursively search in the line above, the below snippet updates self.Qsa and self.Nsa of all visited nodes from the bottom to the root.
+        #-------------------------------------------------------------------------------------
+        #because we recursively search in the lines above, the below snippet updates self.Qsa and self.Nsa of all visited nodes from the bottom to the root.
         #Because we reach a leaf sooner or later, the middle section is executed and v below is well defined!
         #formulas below match what we have in notebook.
         if (s,a) in self.Qsa:
-            self.Qsa[(s,a)] = (self.Nsa[(s,a)]*self.Qsa[(s,a)] + v)/(self.Nsa[(s,a)]+1)
+            self.Qsa[(s,a)] = (self.Nsa[(s,a)]*self.Qsa[(s,a)] + v)/(self.Nsa[(s,a)]+1) #The v in this equation could be the true terminal reward OR the predicted reward from NN, depending on whether the search ended on a leaf which is also a terminal node. 
             self.Nsa[(s,a)] += 1
 
-        else: #if (s,a) is not in dictionary self.Qsa, that means i(s,a) has never been visited before. IOW N(s,a) = 0. Hence, by the formula 3 lines above, self.Qsa[(s,a)] = v.
+        else: #if (s,a) is not in dictionary self.Qsa, that means (s,a) has never been visited before. IOW N(s,a) = 0. Hence, by the formula 3 lines above, self.Qsa[(s,a)] = v.
             self.Qsa[(s,a)] = v 
             self.Nsa[(s,a)] = 1
 
         self.Ns[s] += 1
-        return v
-        #-------------------------------------------------------------------------------------
+        return v #THIRD RETURN
+        
