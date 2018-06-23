@@ -122,7 +122,7 @@ class MCTS():
                         
             self.Ps[s], v = self.nnet.predict(canonicalBoard) #neural network takes in position s and returns a prediction(which is p_theta vector and v_theta (numpy vector). Look at own notes)
             valids = self.game.getValidMoves(canonicalBoard) #returns a numpy vector of 0 and 1's which indicate valid moves from the set of all actions
-            self.Ps[s] = self.Ps[s]*valids      # masking(hiding) invalid moves(this inner product creates a vector of probabilities of valid moves)
+            self.Ps[s] = self.Ps[s]*valids      # masking(hiding) invalid moves(this inner product creates a vector of probabilities of valid moves) the neural network may predict. 
             sum_Ps_s = np.sum(self.Ps[s])       # probabilities may not add up to 1 anymore after hiding invalid moves(since NN may predict nonzero prob for illegal moves). Hence, renormalize such that
                                                 # valid actions sum up to 1.
             if sum_Ps_s > 0:
@@ -162,7 +162,7 @@ class MCTS():
                     best_act = a
 
         a = best_act #define action with highest UCB computed above as a. a is chosen over valids. Note that best_act is a single action we take when traversing a single depth of MCTS tree.
-        next_s = self.game.getNextState(canonicalBoard, a) #returns next board state(game object)
+        next_s = self.game.getNextState(canonicalBoard, a) #returns next state object
 
         v = self.search(next_s) #traverse from root to a leaf or terminal node using recursive search. 
         #-------------------------------------------------------------------------------------
@@ -173,7 +173,7 @@ class MCTS():
             self.Qsa[(s,a)] = (self.Nsa[(s,a)]*self.Qsa[(s,a)] + v)/(self.Nsa[(s,a)]+1) #The v in this equation could be the true terminal reward OR the predicted reward from NN, depending on whether the search ended on a leaf which is also a terminal node. 
             self.Nsa[(s,a)] += 1
 
-        else: #if (s,a) is not in dictionary self.Qsa, that means (s,a) has never been visited before. IOW N(s,a) = 0. Hence, by the formula 3 lines above, self.Qsa[(s,a)] = v.
+        else: #if (s,a) is not in dictionary self.Qsa, that means (s,a) has never been visited before. These are edges connected to leaves!! IOW N(s,a) = 0. Hence, by the formula 3 lines above, self.Qsa[(s,a)] = v.
             self.Qsa[(s,a)] = v 
             self.Nsa[(s,a)] = 1
 

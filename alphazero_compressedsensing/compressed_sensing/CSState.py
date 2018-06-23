@@ -28,7 +28,7 @@ class State():
         
         self.col_indices = S
         
-    def compute_x_S_and_res(self, args, Game_args): #compute feature vectors for feeding into NN
+    def compute_x_S_and_res(self, args, Game_args): #compute feature vectors for feeding into NN. Labels are returned by computeTermReward. 
         if self.col_indices: #If self.col_indices is not an empty list(meaning that we are not at the start state in which we have not chosen any columns)
             #FEATURE 1:
             if args['x_l2'] == True:
@@ -75,9 +75,9 @@ class State():
             x = np.linalg.lstsq(A_S, Game_args.obs_vector)
         
             if not x[1]: #Case in which residual(x[1]) returns an empty size 1 array, which implies there is an exact solution or rank of matrix less than n(num of columns)
-                self.termreward = - len(self.col_indices)
+                self.termreward = - args['alpha']*len(self.col_indices)
             elif len(self.col_indices) == Game_args.game_iter or self.action_indices[-1] == 1 or x[1][0] < args['epsilon']: #Game_args.game_iter is set every time we call Game_args.generateNewObsVec
-                self.termreward = - len(self.col_indices) - args['gamma']*x[1][0]
+                self.termreward = - args['alpha']*len(self.col_indices) - args['gamma']*x[1][0]
             else:
                 self.termreward = 0 #not terminal state
         elif self.action_indices[-1] == 1: #If self.col_indices is an empty list, but stopping action was taken, then reward is exactly equal to the negative of squared norm of y * gamma

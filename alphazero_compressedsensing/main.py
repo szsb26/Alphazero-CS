@@ -53,9 +53,9 @@ args = {
     'cpuct': 1, #controls the amount of exploration at each depth of MCTS tree.
     'numMCTSSims': 500, #For each move, numMCTSSims is equal to the number of MCTS simulations in finding the next move during self play. 
     'tempThreshold': 5,    #dictates when the MCTS starts returning deterministic polices (vector of 0 and 1's). See Coach.py for more details.
-    'gamma': 1, #note that reward for a terminal state is -alpha||x||_0 - gamma*||A_S*x-y||_2^2. The smaller gamma is, the more likely algorithm is going to choose stopping action earlier(when ||x||_0 is small). gamma enforces how much we want to enforce Ax is close to y. 
+    'gamma': 100, #note that reward for a terminal state is -alpha||x||_0 - gamma*||A_S*x-y||_2^2. The smaller gamma is, the more likely algorithm is going to choose stopping action earlier(when ||x||_0 is small). gamma enforces how much we want to enforce Ax is close to y. 
                 #choice of gamma is heavily dependent on the distribution of our signal and the distribution of entries of A. gamma should be apx. bigger than m/||A_Sx^* - y||_2^2, where y = Ax, and x^* is the solution to the l2 regression problem.
-    'alpha':1e-03,  #note that reward for a terminal state is -alpha||x||_0 - gamma*||A_S*x-y||_2^2. The smaller alpha is, the less weight the algorithm gives in selecting a sparse solution.
+    'alpha':1,  #note that reward for a terminal state is -alpha||x||_0 - gamma*||A_S*x-y||_2^2. The smaller alpha is, the more weight the algorithm gives in selecting a sparse solution.
     'epsilon': 1e-5, #If x is the optimal solution to l2, and the residual of l2 regression ||A_Sx-y||_2^2 is less than epsilon, then the state corresponding to indices S is a terminal state in MCTS. 
 }
 

@@ -69,9 +69,10 @@ class Coach():
             #print('The next action taken is: ' + str(action))
             #-----------------------------
             #Given the randomly generated action, move the root node to the next state.   
-            state = self.game.getNextState(state, action)
-
-            r = self.game.getGameEnded(state, self.args, self.game_args) #float value
+            state = self.game.getNextState(state, action) #These states are new and not the state objects created in MCTS search. We cant access those private variables, but we can access
+            #every dictionary in MCTS by transforming the state into its string representation.
+            state_stringRep = self.game.stringRepresentation(state)
+            r = self.mcts.Es[state_stringRep]
             #FOR TESTING------------------
             #print('The reward for the next state ' + str(state.col_indices) + ' is: ' + str(r))
             #-----------------------------

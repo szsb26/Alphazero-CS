@@ -57,8 +57,8 @@ args = {
     'cpuct': 1, #controls the amount of exploration at each depth of MCTS tree.
     'numMCTSSims': 500, #For each move, numMCTSSims is equal to the number of MCTS simulations in finding the next move during self play. 
     'tempThreshold': 5,    #dictates when the MCTS starts returning deterministic polices (vector of 0 and 1's). See Coach.py for more details.
-    'gamma': 1, #note that reward for a terminal state is -alpha||x||_0 - gamma*||A_S*x-y||_2^2. The smaller gamma is, the more likely algorithm is going to choose stopping action earlier(when ||x||_0 is small). gamma enforces how much we want to enforce Ax is close to y. We need gamma large enough!!!
-    'alpha': 1e-3, #note that reward for a terminal state is -alpha||x||_0 - gamma*||A_S*x-y||_2^2. The smaller alpha is, the less weight the algorithm gives in selecting a sparse solution. 
+    'gamma': 100, #note that reward for a terminal state is -alpha||x||_0 - gamma*||A_S*x-y||_2^2. The smaller gamma is, the more likely algorithm is going to choose stopping action earlier(when ||x||_0 is small). gamma enforces how much we want to enforce Ax is close to y. We need gamma large enough!!!
+    'alpha': 1, #note that reward for a terminal state is -alpha||x||_0 - gamma*||A_S*x-y||_2^2. The smaller alpha is, the more weight the algorithm gives in selecting a sparse solution. 
     'epsilon': 1e-5, #If x is the optimal solution to l2, and the residual of l2 regression ||A_Sx-y||_2^2 is less than epsilon, then the state corresponding to indices S is a terminal state in MCTS. 
 }
 
@@ -87,7 +87,7 @@ alphazero_accuracy = np.zeros(args['m'])
 OMP_accuracy = np.zeros(args['m'])
 #For every signal in testData, initiate a single game of self play via Coach.executeEpisode
 
-for s in range(1, args['sparsity']-4):
+for s in range(1, args['sparsity']-5):
     obsy_filepath = 'testData/' + str(s) + 'sparse' + '/' + str(s) + 'sparse_obsy.csv'
     sparsex_filepath = 'testData/' + str(s) + 'sparse' + '/' + str(s) + 'sparse_x.csv'
     with open(obsy_filepath) as obsy, open(sparsex_filepath) as sparsex:
@@ -99,8 +99,6 @@ for s in range(1, args['sparsity']-4):
         for y, x in zip(reader_y, reader_x):
             y = list(map(float,y))
             y = np.asarray(y)
-            y_norm_sq = np.linalg.norm(y)**2
-            print('y_norm is: ' + str(y_norm))
             x = list(map(float, x))
             x = np.asarray(x)
             #Initialize game_args and MCTS object(MCTS needs to be reinitialized everytime a new (y,x) pair is generated)
@@ -128,7 +126,6 @@ for s in range(1, args['sparsity']-4):
                 state_index = 0
                 print('The original signal x is: ' + str(x))
                 print('The observed signal y is: ' + str(y))
-                print('The norm of signal y squared is: ' + str(y_norm_sq))
                 #Print information about the failed recovery
                 for state in trainExamples:
                     #compute the probability distribution output by MCTS

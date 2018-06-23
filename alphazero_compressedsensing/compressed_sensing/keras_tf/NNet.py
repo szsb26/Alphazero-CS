@@ -14,8 +14,7 @@ class NNetWrapper():
     #INPUT: a list of state objects which have values for self.feature_dic, self.p_as, and self.z
     #OUTPUT: A list [X,Y] training data saved into .csv file. Ideally for training, we would just directly read in from .csv file if
     #necessary
-    #NOTE: Do not use state.nn_input, since constructing state.nn_input for each state takes additional time. Training (X,Y)
-    #is directly constructed from state.feature_dic. nn_input should only be used for NNetWrapper.predict. 
+    #NOTE: Instead of using features_dic, we can also stack all state's state.nn_inputs. 
         num_states = len(states)
         X = []
         Y = []
