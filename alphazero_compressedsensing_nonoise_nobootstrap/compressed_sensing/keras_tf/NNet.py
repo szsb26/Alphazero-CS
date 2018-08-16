@@ -1,4 +1,4 @@
-from CS_NNet import NetArch, NetArch1
+from CS_NNet import NetArch, NetArch1, NetArch2
 import numpy as np
 import pickle
 from keras.models import Model, model_from_json
@@ -9,7 +9,7 @@ class NNetWrapper():
         self.args = args
         #self.nnet is a NetArch object.
         #NetArch object contains self variables self.args, self.p_as, self.v, and most importantly, self.model
-        self.nnet = NetArch(args)
+        self.nnet = NetArch2(args)
     
     def constructTraining(self, states): #this method is used in Coach.py
     #INPUT: a list of state objects which have values for self.feature_dic, self.p_as, and self.z

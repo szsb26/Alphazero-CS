@@ -1,4 +1,5 @@
 import numpy as np
+from math import exp #to calculate the transformed feature data
 
 #CSState is an object which stores as much information as possible about the current state. 
 #All the variables are initialized to None for memory sake when conducting MCTS search, as only action_indices

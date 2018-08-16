@@ -47,17 +47,16 @@ class CSGame():
     #input is a State object. Output is a binary numpy vector of size n+1 for valid moves,
     #where b[i] = 1 implies i+1 column can be taken(for i in [0,1,...,n-1].b[n]= 0 or 1 denotes whether
     #the stopping action can be taken. n is number of columns of sensing matrix A. 
-        valid_moves = np.zeros(state.action_indices.size)
-        #Determine valid moves for all columns
-        for i in range(state.action_indices.size-1):
-            if state.action_indices[i] == 0:
-                valid_moves[i] = 1
+        num_actions = state.action_indices.size
+        valid_moves = np.zeros(num_actions)
+        #Determine valid moves for all columns except the stopping action by flipping action_indices vector. 
+        valid_moves[0:num_actions] = 1 - state.action_indices[0:num_actions]
         #Determine if the stopping action is a valid move. This is determined by whether the current state has residual of ||A_Sx-y||_2^2. If residual has nonzero norm, then stopping action cannot be taken and is set to 0.
         #Note that getValidMoves is called only in MCTS.search, and compute_x_S_and_res has been called before getValidMoves is called, so the below is well defined.
         
         ATtimesres_norm = np.linalg.norm(state.feature_dic['col_res_IP'])**2
         if ATtimesres_norm > 1e-5:
-            valid_moves[state.action_indices.size-1] = 0
+            valid_moves[num_actions-1] = 0
         return valid_moves
         
     def getGameEnded(self, state, args, Game_args): 

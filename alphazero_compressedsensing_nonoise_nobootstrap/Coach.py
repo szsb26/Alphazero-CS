@@ -81,20 +81,25 @@ class Coach():
             #return breaks out of the while loop, and we only break if we are on a state which returns nonzero reward.
             # If r not equal to 0, that means the state we are on is a terminal state,
             #which implies we should propagate the rewards up to every state in states
+
+            
             if r!=0:
                 states.append(state) #append the last state with nonzero reward. Note that pi_as of the last terminal state is a vector of zeros. Refer to the default constructor of the State object
+                #FOR TESTING-------------------------------------------------
+                #print('The reward label for every state is: ', r)
+                #END TESTING-------------------------------------------------
                 for state in states:
                     #compute state.feature_dic
                     state.compute_x_S_and_res(self.args, self.game_args)
                     #compute the label state.z
                     state.z = r
-                    
+                    #print('The reward label for every state is: ', r)
                     #FOR TESTING----------------------------------------------------------
-                    print('STATE INFO:')
-                    print('state.col: ' + str(state.col_indices))
-                    print('state.feature_dic: ' + str(state.feature_dic))
-                    print('state.pi_as: ' + str(state.pi_as))
-                    print('state.reward: ' + str(state.z))
+                    #print('STATE INFO:')
+                    #print('state.col: ' + str(state.col_indices))
+                    #print('state.feature_dic: ' + str(state.feature_dic))
+                    #print('state.pi_as: ' + str(state.pi_as))
+                    #print('state.reward: ' + str(state.z))
                     #END TESTING----------------------------------------------------------
                 
                 trainExamples = states 
@@ -119,7 +124,7 @@ class Coach():
                 self.arena_game_args.sensing_matrix = np.load(self.args['fixed_matrix_filepath'] + '/sensing_matrix.npy')
                 
                 #FOR TESTING-------------------------------------------------------
-                print(self.game_args.sensing_matrix)
+                #print(self.game_args.sensing_matrix)
                 #END TESTING-------------------------------------------------------
                 
             else: #if not loading an existing matrix in self.args['fixed_matrix_filepath'], then generate a new sensing matrix of given type self.args['matrix_type']
@@ -129,7 +134,7 @@ class Coach():
                 self.game_args.save_Matrix(self.args['fixed_matrix_filepath'])
                 
                 #FOR TESTING-------------------------------------------------------
-                print(self.game_args.sensing_matrix)
+                #print(self.game_args.sensing_matrix)
                 #END TESTING-------------------------------------------------------
             
         for i in range(1, self.args['numIters']+1):
@@ -150,19 +155,19 @@ class Coach():
                     self.mcts = MCTS(self.game, self.nnet, self.args, self.game_args)#create new search tree for each game we play
                     
                     #TESTING-------------------------
-                    print('The generated sparse vector x has sparsity: ' + str(self.game_args.game_iter))
+                    #print('The generated sparse vector x has sparsity: ' + str(self.game_args.game_iter))
                     #--------------------------------
                     
                     #TESTING--------------------------
-                    print('Starting self-play game iteration: ' + str(eps))
-                    start_game = time.time()
+                    #print('Starting self-play game iteration: ' + str(eps))
+                    #start_game = time.time()
                     #--------------------------------
                     
                     iterationTrainExamples += self.executeEpisode() #Play a new game with newly generated y. iterationTrainExamples is a deque containing states each generated self play game
                     
                     #TESTING--------------------------
-                    end_game = time.time()
-                    print('Total time to play game ' + str(eps) + ' is: ' + str(end_game-start_game))
+                    #end_game = time.time()
+                    #print('Total time to play game ' + str(eps) + ' is: ' + str(end_game-start_game))
                 #-----------------------------------------------------
                     # bookkeeping + plot progress
                     eps_time.update(time.time() - end)
@@ -222,12 +227,27 @@ class Coach():
                 trainExamples = self.nnet.constructTraining(trainExamples)
                 
                 #FOR TESTING-----------------------------------------------------
-                print('trainExamples feature arrays: ' + str(trainExamples[0]))
-                print('trainExamples label arrays: ' + str(trainExamples[1]))
-                
+                #print('trainExamples feature arrays: ' + str(trainExamples[0]))
+                #print('trainExamples label arrays: ' + str(trainExamples[1]))
                 #END TESTING-----------------------------------------------------
+                    
+                self.nnet.train(trainExamples[0], trainExamples[1], folder = self.args['network_checkpoint'], filename = 'trainHistDict' + str(i-1))    
                 
-                self.nnet.train(trainExamples[0], trainExamples[1], folder = self.args['network_checkpoint'], filename = 'trainHistDict' + str(i-1))          
+                #FOR TESTING-----------------------------------------------------
+                #weights = self.nnet.nnet.model.get_weights()
+                #min_max = []
+                #for layer_weights in weights:
+                    #print('number of weights in current array in list (output as matrix size): ', layer_weights.shape)
+                    #layer_weights_min = np.amin(layer_weights)
+                    #layer_weights_max = np.amax(layer_weights)
+                    #min_max.append([layer_weights_min, layer_weights_max])
+                #print('')
+                #print('The smallest and largest weights of each layer are: ')
+                #for pair in min_max:
+                    #print(pair)
+                #print('')
+                #END TESTING-----------------------------------------------------
+                      
                 self.nnet.save_checkpoint(folder = self.args['network_checkpoint'], filename='nnet_checkpoint' + str(i-1))
                 self.nnet.save_checkpoint(folder = self.args['network_checkpoint'], filename = 'best')
 

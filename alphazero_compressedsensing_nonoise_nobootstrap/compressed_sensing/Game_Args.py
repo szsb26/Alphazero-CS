@@ -1,4 +1,7 @@
 import numpy as np
+from scipy.linalg import hadamard
+from scipy.stats import ortho_group
+from random import sample
     
 class Game_args(): #We save the args in Game_args class here because later on we may need class methods to generate new matrices.
     def __init__(self, A = None, y = None, x = None, k = None):
@@ -18,10 +21,28 @@ class Game_args(): #We save the args in Game_args class here because later on we
             for i in range(n):
                 self.sensing_matrix[:,i] = self.sensing_matrix[:,i]/np.linalg.norm(self.sensing_matrix[:,i])
         if type == 'bernoulli':
+        #For small m and n, s columns has high prob. of being linearly dependent. This causes x_S feature to have components
+        #which blow up, which causes the output of the neural network to output a deterministic prob. dist. of all zeros and a single 1, and v to be nan(because it is so large)
             self.sensing_matrix = np.random.binomial(1,1/2,(m,n))
             self.sensing_matrix = self.sensing_matrix.astype(float)
             for i in range(n):
                 self.sensing_matrix[:,i] = self.sensing_matrix[:,i]/np.linalg.norm(self.sensing_matrix[:,i])
+        if type == 'hadamard': 
+        #n must be a power of 2 here!!! For small m and n, s columns has high prob. of being linearly dependent. This causes x_S feature to have components
+        #which blow up, which causes the output of the neural network to output a deterministic prob. dist. of all zeros and a single 1, and v to be nan(because it is so large)
+            A = hadamard(n)
+            S = sample(range(1, n), m) #sample m indices randomly
+            self.sensing_matrix = A[S,:]
+            self.sensing_matrix = self.sensing_matrix.astype(float)
+            for i in range(n):
+                self.sensing_matrix[:,i] = self.sensing_matrix[:,i]/np.linalg.norm(self.sensing_matrix[:,i])
+        if type == 'subsampled_haar':
+            A = ortho_group.rvs(n)
+            S = sample(range(1, n), m)
+            self.sensing_matrix = A[S,:]
+            for i in range(n):
+                self.sensing_matrix[:,i] = self.sensing_matrix[:,i]/np.linalg.norm(self.sensing_matrix[:,i])
+            
     
     def generateNewObsVec(self, entry_type, sparsity): #Generate a vector x with number of nonzeros up to sparsity, with designated entry type. 
         #If self.sensing_matrix has not already been set, then this comparison throws an error. 

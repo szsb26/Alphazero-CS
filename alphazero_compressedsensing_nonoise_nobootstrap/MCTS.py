@@ -67,8 +67,8 @@ class MCTS():
         counts = [self.Nsa[(s,a)] if (s,a) in self.Nsa else 0 for a in range(self.game.getActionSize(self.args))]
         
         #FOR TESTING-------------------------------------------------------
-        print('current counts is: ' + str(counts))
-        print('sum of counts is: ' + str(sum(counts)))
+        #print('current counts is: ' + str(counts))
+        #print('sum of counts is: ' + str(sum(counts)))
         #END TESTING-------------------------------------------------------
         
         if temp==0:
@@ -165,8 +165,10 @@ class MCTS():
             #END TESTING----------------------------
             self.Ps[s], v = self.nnet.predict(canonicalBoard) #neural network takes in position s and returns a prediction(which is p_theta vector and v_theta (numpy vector). Look at own notes)
             #FOR TESTING----------------------------
+            Ps_test, v_test = self.nnet.predict(canonicalBoard)
             #end = time.time()
             #print('Time it takes for NN to predict on leaf state is: ' + str(end - start))
+            #print('Current leaf we are on is: ' + str(canonicalBoard.col_indices))
             #print('The output of the leaf when evaluated by NN is: ')
             #print('predicted prob. dist. : ' + str(self.Ps[s]))
             #print('predicted reward: ' + str(v))
@@ -189,23 +191,33 @@ class MCTS():
                 # NB! All valid moves may be masked if either your NNet architecture is insufficient or you have overfitting or something else.
                 # If you have got dozens or hundreds of these messages you should pay attention to your NNet and/or training process.   
                 print("All valid moves were masked, do workaround.")
+                
                 #FOR TESTING-------------------------------------------
-                print('Ps[s]: ' + str(self.Ps[s]))
-                print('')
-                print('valids: ' + str(valids))
-                print('')
-                print('PROBLEM STATE DURING MCTS SEARCH (AT LEAF):')
-                print('---------------------------------------------')
-                print('action indices: ', canonicalBoard.action_indices)
-                print('')
-                print('col indices: ', canonicalBoard.col_indices)
-                print('')
-                print('feature_dic: ', canonicalBoard.feature_dic)
-                print('')
-                print('nn_input: ', canonicalBoard.nn_input)
-                print('')
-                print('reward: ', canonicalBoard.termreward)
-                print('---------------------------------------------')
+                #print('A_S matrix is: ', self.game_args.sensing_matrix[:, canonicalBoard.col_indices])
+                #print('rank(A_S) is: ', np.linalg.matrix_rank(self.game_args.sensing_matrix[:, canonicalBoard.col_indices]))
+                #print('actual prob. output of neural network: ', Ps_test)
+                #print('actual v output of neural network: ', v_test)
+                #print('Ps[s]: ' + str(self.Ps[s]))
+                #print('')
+                #print('valids: ' + str(valids))
+                #print('')
+                #print('PROBLEM STATE DURING MCTS SEARCH (AT LEAF):')
+                #print('---------------------------------------------')
+                #print('action indices: ', canonicalBoard.action_indices)
+                #print('')
+                #print('col indices: ', canonicalBoard.col_indices)
+                #print('')
+                #print('feature_dic: ', canonicalBoard.feature_dic)
+                #print('')
+                #print('nn_input: ', canonicalBoard.nn_input)
+                #print('')
+                #print('true y: ', self.game_args.obs_vector)
+                #print('')
+                #print('true sparse x: ', self.game_args.sparse_vector)
+                #print('')
+                #print('reward: ', canonicalBoard.termreward)
+                #print('---------------------------------------------')
+                #return
                 #END TESTING-------------------------------------------
                 
                 self.Ps[s] = self.Ps[s] + valids #These two lines makes all valid moves equally probable. 
