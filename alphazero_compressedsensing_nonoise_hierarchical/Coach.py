@@ -57,9 +57,7 @@ class Coach():
             #Note that MCTS.getActionProb runs a fixed number of MCTS.search determined by 
             #args['numMCTSSims']
 
-            #NEW---------------------------------
-            pi, Rsa = self.mcts.getActionProb(state, temp=temp)
-            #END_NEW-----------------------------
+            pi = self.mcts.getActionProb(state, temp=temp)
             
             state.pi_as = pi #update the label pi_as since getActionProb does not do this. THIS IS NOT THE OUTPUT OF NN!!
             #Construct the States_List and Y. Append the state we are at into the states list. 
@@ -68,15 +66,19 @@ class Coach():
             #np.random.choice(len(pi), p=pi) generates an integer in {0,...,len(pi)-1} according to distribution p
             action = np.random.choice(len(pi), p=pi)
             #Given the randomly generated action, move the root node to the next state.   
-            state = self.game.getNextState(state, action) #These states are new and not the state objects created in MCTS search. We cant access those private variables, but we can access
-            
+
             #NEW-----------------------------------------
-            for a in Rsa[(state,action)]:
-                state = self.game.getNextState(state,a)
+            state_stringRep = self.game.stringRepresentation(state) #needed to access dictionary self.mcts.Rsa
+            next_s = self.game.getNextState(state, action) #These states are new and not the state objects created in MCTS search. We cant access those private variables, but we can access
+            
+            for a in self.mcts.Rsa[(state_stringRep,action)]:
+                next_s = self.game.getNextState(next_s,a)
+            
+            state = next_s #reassign state
+            state_stringRep = self.game.stringRepresentation(state) #needed to access dictionary self.mcts.Es
             #END_NEW--------------------------------------------
             
             #every dictionary in MCTS by transforming the state into its string representation.
-            state_stringRep = self.game.stringRepresentation(state)
             r = self.mcts.Es[state_stringRep]
             #return breaks out of the while loop, and we only break if we are on a state which returns nonzero reward.
             # If r not equal to 0, that means the state we are on is a terminal state,

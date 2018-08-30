@@ -79,7 +79,7 @@ class MCTS():
         #2)For each a, the list self.Rsa[(canonicalBoard, a)]
         
         #NEW------------------------------
-        return (probs, self.Rsa)  #here probs is a vector which sums to 1!!!!
+        return probs #here probs is a vector which sums to 1!!!!
         #END_NEW--------------------------
 
     def search(self, canonicalBoard): 
@@ -122,41 +122,13 @@ class MCTS():
         #3)self.Vs[s]
         #4)self.Ns[s]
         if s not in self.Ps: 
-        #NEW---------------------------------------------------------------------------------
-            valids = self.game.getValidMoves(canonicalBoard)
-            for a in valids:
-                self.Rsa[(s,a)] = []
-                skips = 0
-                temp_state = self.game.getNextState(canonicalBoard, a)
-                while skips < self.args['numMCTSskips'] and len(canonicalBoard.col_indices) < self.game_args.game_iter:
-                    temp_state.compute_x_S_and_res(self.args, self.game_args)
-                    temp_state.converttoNNInput()
-                    p_as, reward = self.nnet.predict(temp_state)
-                    valids = self.game.getValidMoves(temp_state)
-                    valid_pas = p_as*valids
-                    sum_pas = np.sum(valid_pas)
-                    if sum_pas > 0:
-                        valid_pas /= sum_pas 
-                    else:
-                        print('ERROR, sum_pas = 0')
-                        print('p_as: ', p_as)
-                        print('valids: ', valids)
-                        print('valid_pas: ', valid_pas)
-                        break
-                
-                    action = np.random.choice(len(valid_pas), p=valid_pas)
-                    self.Rsa[(s,a)].append(action)
-                    temp_state = self.game.getNextState(temp_state, action)
-                    skips += 1
-        #END_NEW---------------------------------------------------------------------------------
-            
             canonicalBoard.compute_x_S_and_res(self.args, self.game_args)
             canonicalBoard.converttoNNInput()
             
             
             self.Ps[s], v = self.nnet.predict(canonicalBoard) #neural network takes in position s and returns a prediction(which is p_theta vector and v_theta (numpy vector). Look at own notes)
             valids = self.game.getValidMoves(canonicalBoard) #returns a numpy vector of 0 and 1's which indicate valid moves from the set of all actions
-            self.Ps[s] = self.Ps[s]*valids      # masking(hiding) invalid moves(this inner product creates a vector of probabilities of valid moves) the neural network may predict. 
+            self.Ps[s] = self.Ps[s]*valids      # masking(hiding) invalid moves(this element wise product between two equally sized vectors creates a vector of probabilities of valid moves) the neural network may predict. 
             sum_Ps_s = np.sum(self.Ps[s])       # probabilities may not add up to 1 anymore after hiding invalid moves(since NN may predict nonzero prob for illegal moves). Hence, renormalize such that
                                                 # valid actions sum up to 1.
             if sum_Ps_s > 0:
@@ -174,6 +146,42 @@ class MCTS():
             
             self.Vs[s] = valids #Since s is a leaf, store the newly found valid moves and set amount of times s was visited as zero.
             self.Ns[s] = 0
+            
+            #NEW---------------------------------------------------------------------------------
+            #If s is a leaf, then for each a, we need to construct the list self.Rsa[(s,a)], the additional columns we are forced to take AFTER
+            #we have already taken action a from state s. 
+            #FOR TESTING----------------------
+            #print(canonicalBoard.col_indices, canonicalBoard.action_indices)
+            #END TESTING----------------------
+            for a in range(len(valids)):
+                if valids[a] == 1:
+                    self.Rsa[(s,a)] = []
+                    skips = 0
+                    temp_state = self.game.getNextState(canonicalBoard, a)
+                    while skips < self.args['numMCTSskips'] and len(temp_state.col_indices) < self.game_args.game_iter:
+                        temp_state.compute_x_S_and_res(self.args, self.game_args)
+                        temp_state.converttoNNInput()
+                        p_as, reward = self.nnet.predict(temp_state)
+                        valids_fortemp = self.game.getValidMoves(temp_state)
+                        valid_pas = p_as*valids_fortemp
+                        sum_pas = np.sum(valid_pas)
+                        if sum_pas > 0:
+                            valid_pas /= sum_pas 
+                        else:
+                            print('ERROR, sum_pas = 0')
+                            print('p_as: ', p_as)
+                            print('valids: ', valids_fortemp)
+                            print('valid_pas: ', valid_pas)
+                            break
+                
+                        action = np.random.choice(len(valid_pas), p=valid_pas)
+                        self.Rsa[(s,a)].append(action)
+                        temp_state = self.game.getNextState(temp_state, action)
+                        skips += 1
+                #FOR TESTING----------------------------
+                    #print((s,a), self.Rsa[(s,a)])
+                #END TESTING----------------------------
+            #END_NEW---------------------------------------------------------------------------------
             
             return v #SECOND RETURN
         #--------------------------------------------------------
