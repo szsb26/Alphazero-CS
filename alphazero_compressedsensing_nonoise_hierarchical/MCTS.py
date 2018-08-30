@@ -147,42 +147,6 @@ class MCTS():
             self.Vs[s] = valids #Since s is a leaf, store the newly found valid moves and set amount of times s was visited as zero.
             self.Ns[s] = 0
             
-            #NEW---------------------------------------------------------------------------------
-            #If s is a leaf, then for each a, we need to construct the list self.Rsa[(s,a)], the additional columns we are forced to take AFTER
-            #we have already taken action a from state s. 
-            #FOR TESTING----------------------
-            #print(canonicalBoard.col_indices, canonicalBoard.action_indices)
-            #END TESTING----------------------
-            for a in range(len(valids)):
-                if valids[a] == 1:
-                    self.Rsa[(s,a)] = []
-                    skips = 0
-                    temp_state = self.game.getNextState(canonicalBoard, a)
-                    while skips < self.args['numMCTSskips'] and len(temp_state.col_indices) < self.game_args.game_iter:
-                        temp_state.compute_x_S_and_res(self.args, self.game_args)
-                        temp_state.converttoNNInput()
-                        p_as, reward = self.nnet.predict(temp_state)
-                        valids_fortemp = self.game.getValidMoves(temp_state)
-                        valid_pas = p_as*valids_fortemp
-                        sum_pas = np.sum(valid_pas)
-                        if sum_pas > 0:
-                            valid_pas /= sum_pas 
-                        else:
-                            print('ERROR, sum_pas = 0')
-                            print('p_as: ', p_as)
-                            print('valids: ', valids_fortemp)
-                            print('valid_pas: ', valid_pas)
-                            break
-                
-                        action = np.random.choice(len(valid_pas), p=valid_pas)
-                        self.Rsa[(s,a)].append(action)
-                        temp_state = self.game.getNextState(temp_state, action)
-                        skips += 1
-                #FOR TESTING----------------------------
-                    #print((s,a), self.Rsa[(s,a)])
-                #END TESTING----------------------------
-            #END_NEW---------------------------------------------------------------------------------
-            
             return v #SECOND RETURN
         #--------------------------------------------------------
         
@@ -212,11 +176,37 @@ class MCTS():
 
         a = best_act #define action with highest UCB computed above as a. a is chosen over valids. Note that best_act is a single action we take when traversing a single depth of MCTS tree.
         #Once a is taken, we then force neural network to immediately take another 'skips' columns
-        next_s = self.game.getNextState(canonicalBoard, a) #returns next state object
+        #next_s = self.game.getNextState(canonicalBoard, a) #returns next state object
         
-        #NEW---------------------------------------------------
-        for action in self.Rsa[(s,a)]: #note that this is a list
-            next_s = self.game.getNextState(next_s, action)
+        #NEW----------------------------------------------------------       
+        next_s = self.game.getNextState(canonicalBoard, a)
+        
+        if (s,a) not in self.Rsa:
+            self.Rsa[(s,a)] = []
+            skips = 0
+            while skips < self.args['numMCTSskips'] and len(next_s.col_indices) < self.game_args.game_iter:
+                next_s.compute_x_S_and_res(self.args, self.game_args)
+                next_s.converttoNNInput()
+                p_as, reward = self.nnet.predict(next_s)
+                valids_nexts = self.game.getValidMoves(next_s)
+                valid_pas = p_as*valids_nexts
+                sum_pas = np.sum(valid_pas)
+                if sum_pas > 0:
+                    valid_pas /= sum_pas 
+                else:
+                    print('ERROR, sum_pas = 0')
+                    print('p_as: ', p_as)
+                    print('valids: ', valids_fortemp)
+                    print('valid_pas: ', valid_pas)
+                    break
+                
+                action = np.random.choice(len(valid_pas), p=valid_pas)
+                self.Rsa[(s,a)].append(action)
+                next_s = self.game.getNextState(next_s, action)
+                skips += 1
+        else:
+            for action in self.Rsa[(s,a)]:
+                next_s = self.game.getNextState(next_s,action)
         #END_NEW------------------------------------------------------
         
         v = self.search(next_s) #traverse from root to a leaf or terminal node using recursive search. 
