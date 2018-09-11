@@ -23,29 +23,16 @@ args = {
         'load_existing_matrix': True, #If we are using a fixed_matrix, then this option toggles whether to load an existing matrix from args['fixed_matrix_filepath'] or generate a new one. If loading an existing matrix, the matrix must be saved as name 'sensing_matrix.npy'
             'matrix_type': 'sdnormal',  #type of random matrix generated if(assuming we are not loading existing matrix)
     'x_type': 'uniform01',  #type of entries generated for sparse vector x
-    'm': 25, #row dimension of A
-    'n':250, #column dimension of A
-    'sparsity':25, #dictates the maximum sparsity of x when generating the random vector x. Largest number of nonzeros of x is sparsity-1. sparsity cannot be greater than m above. 
+    'm': 10, #row dimension of A
+    'n': 100, #column dimension of A
+    'sparsity': 10, #dictates what sparsity level we test up to in testData
     'fixed_matrix_filepath': os.getcwd() + '/fixed_sensing_matrix', #If args['fixed_matrix'] above is set to True, then this parameter determines where the fixed sensing matrix is saved or where the existing matrix is loaded from. 
-    #---------------------------------------------------------------
-    #General Alphazero Training Parameters
-    'numIters': 100, #number of alphazero iterations performed. Each iteration consists of 1)playing numEps self play games, 2) retraining neural network
-    'numEps': 200, #dictates how many self play games are played each iteration of the algorithm
-    'maxlenOfQueue':10000, #dictates total number of game states saved(not games). 
-    'numItersForTrainExamplesHistory': 1, #controls the size of trainExamplesHistory, which is a list of different iterationTrainExamples deques. 
-    'checkpoint': os.getcwd() + '/training_data', #filepath for SAVING newly generated self play training data
-    'load_training': True, #If set to True, then load latest batch of self play games for training. 
-        'load_folder_(folder)': os.getcwd() + '/training_data', #filepath for LOADING the latest set of training data
-        'load_folder_(filename)': 'best.pth.tar', #filename for LOADING the latest generated set of training data. Currently, this must be saved as 'best.pth.tar'
-    'Arena': False, #determines whether model selection/arena is activated or not. Below options will not be run if this is set to False.
-        'arenaCompare': 100, #number of games played in the arena to compare 2 networks pmcts and nmcts
-        'updateThreshold': 0.55, #determines the percentage of games nmcts must win for us to update pmcts to nmcts
     #---------------------------------------------------------------
     #NN Parameters
     'lr': 0.001,    #learning rate of NN
     'num_layers': 2,    #number of hidden layers after the 1st hidden layer
     'neurons_per_layer':200,    #number of neurons per hidden layer
-    'epochs': 10,   #number of training epochs. If There are K self play states, then epochs is roughly K/batch_size. Note further that K <= numEps*sparsity. epochs determines the number of times weights are updated.
+    'epochs': 20,   #number of training epochs. If There are K self play states, then epochs is roughly K/batch_size. Note further that K <= numEps*sparsity. epochs determines the number of times weights are updated.
     'batch_size': 200, #dictates the batch_size when training 
     'num_features' : 2, #number of self-designed features used in the input
     'load_nn_model' : True, #If set to True, load the best network (best_model.json and best_weights.h5)
@@ -55,8 +42,12 @@ args = {
     'lambda' : True,    #the vector of residuals, lambda = A^T(A_Sx-y), where x is the optimal solution to min_z||A_Sz - y||_2^2
     #---------------------------------------------------------------
     #MCTS parameters
-    'cpuct': 1, #controls the amount of exploration at each depth of MCTS tree.
+    'cpuct': 3, #controls the amount of exploration at each depth of MCTS tree.
     'numMCTSSims': 500, #For each move, numMCTSSims is equal to the number of MCTS simulations in finding the next move during self play. 
+    'numMCTSskips': 2, 
+        'skip_rule': None, #Current options: None(defaults to current policy/value network), OMP(uses OMP rule to pick next column), bootstrap(uses boostrapped network in bootstrap folder) 
+        'skip_nnet_folder': os.getcwd() + '/skip_network', 
+        'skip_nnet_filename': 'skip_nnet', 
     'tempThreshold': 0,    #dictates when the MCTS starts returning deterministic polices (vector of 0 and 1's). See Coach.py for more details.
     'gamma': 1, #note that reward for a terminal state is -alpha||x||_0 - gamma*||A_S*x-y||_2^2. The smaller gamma is, the more likely algorithm is going to choose stopping action earlier(when ||x||_0 is small). gamma enforces how much we want to enforce Ax is close to y. We need gamma large enough!!!
     'alpha': 1e-5, #note that reward for a terminal state is -alpha||x||_0 - gamma*||A_S*x-y||_2^2. The smaller alpha is, the more weight the algorithm gives in selecting a sparse solution. 
@@ -81,14 +72,23 @@ model_filename = 'best'
 nnet.load_checkpoint(os.getcwd(), model_filename)
 #initialize a new game object
 new_game = CSGame()
+#initialize skip_nnet if option is turned on
+if args['numMCTSskips'] > 0 and args['skip_rule'] == 'bootstrap':
+    skip_nnet = NNetWrapper(args)
+    skip_nnet.load_checkpoint(args['skip_nnet_folder'], args['skip_nnet_filename'])
+
+elif args['numMCTSskips'] > 0 and args['skip_rule'] == None:
+    skip_nnet = nnet
+    
+else:
+    skip_nnet = None
+
 #Initialize Alphazero
-Alphazero = Coach(new_game, nnet, args, game_args)
+Alphazero = Coach(new_game, nnet, args, game_args, skip_nnet)
 #---------------------------------------------------------------
 #Alphazero IS NOW READY FOR PREDICTION
 #Initialize accuracy vector
-alphazero_accuracy = np.zeros(args['m'])
-OMP_accuracy = np.zeros(args['m'])
-l1_accuracy = np.zeros(args['m'])
+alphazero_accuracy = np.zeros(A.shape[0])
 #For every signal in testData, initiate a single game of self play via Coach.executeEpisode
 
 for s in range(1, args['sparsity']):
@@ -110,7 +110,7 @@ for s in range(1, args['sparsity']):
             
             Alphazero.game_args.obs_vector = y
             Alphazero.game_args.game_iter = s #If this is set to s, then all states with s columns taken are terminal states.
-            Alphazero.mcts = MCTS(Alphazero.game, Alphazero.nnet, Alphazero.args, Alphazero.game_args)
+            Alphazero.mcts = MCTS(Alphazero.game, Alphazero.nnet, Alphazero.args, Alphazero.game_args, skip_nnet)
             
             #trainExamples is a list of states visited in the course of a game. Each state has well defined state.pi_as, state.z, and state.feature_dic
             
@@ -165,11 +165,3 @@ print('Recovery of Alphazero is: ' )
 print(str(alphazero_accuracy))
 print('----------------------------------------------------')
 print('')
-
-#plt.plot(alphazero_accuracy)
-#plt.plot(OMP_accuracy)
-#plt.legend(['alphazero', 'OMP'], loc = 'upper left')
-#plt.title('alphazero iteration 0 vs OMP')
-#plt.ylabel('accuracy')
-#plt.xlabel('sparsity')
-#plt.savefig('alphazero_it0_vs_OMP.png')

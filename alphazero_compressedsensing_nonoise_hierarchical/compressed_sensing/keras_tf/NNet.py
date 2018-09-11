@@ -83,7 +83,7 @@ class NNetWrapper():
             
     def load_checkpoint(self, folder, filename):
     #INPUT: folder and filename
-    #OUTPUT: load a model and its weights with given folder and filename into self.nnet
+    #OUTPUT: load a model and its weights with given folder and filename
         #Load the model
         json_file = open(folder + '/' + filename + '_model.json', 'r')
         loaded_model_json = json_file.read()

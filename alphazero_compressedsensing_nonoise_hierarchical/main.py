@@ -24,13 +24,13 @@ args = {
         'load_existing_matrix': True, #If we are using a fixed_matrix, then this option toggles whether to load an existing matrix from args['fixed_matrix_filepath'] or generate a new one. If loading an existing matrix, the matrix must be saved as name 'sensing_matrix.npy'
             'matrix_type': 'sdnormal',  #type of random matrix generated if(assuming we are not loading existing matrix)
     'x_type': 'uniform01',  #type of entries generated for sparse vector x when playing games of self-play
-    'm': 7, #row dimension of A
-    'n': 15, #column dimension of A
-    'sparsity':7, #dictates the maximum sparsity of x when generating the random vector x. Largest number of nonzeros of x is sparsity-1. sparsity cannot be greater than m above. 
+    'm': 10, #row dimension of A
+    'n': 100, #column dimension of A
+    'sparsity':10, #dictates the maximum sparsity of x when generating the random vector x. Largest number of nonzeros of x is sparsity-1. sparsity cannot be greater than m above. 
     'fixed_matrix_filepath': os.getcwd() + '/fixed_sensing_matrix', #If args['fixed_matrix'] above is set to True, then this parameter determines where the fixed sensing matrix is saved or where the existing matrix is loaded from. 
     #---------------------------------------------------------------
     #General Alphazero Training Parameters
-    'numIters': 50, #number of alphazero iterations performed. Each iteration consists of 1)playing numEps self play games, 2) retraining neural network
+    'numIters': 100, #number of alphazero iterations performed. Each iteration consists of 1)playing numEps self play games, 2) retraining neural network
     'numEps': 200, #dictates how many self play games are played each iteration of the algorithm
     'maxlenOfQueue':10000, #dictates total number of game states saved(not games). 
     'numItersForTrainExamplesHistory': 1, #controls the size of trainExamplesHistory, which is a list of different iterationTrainExamples deques. 
@@ -45,7 +45,7 @@ args = {
     #NN Parameters
     'lr': 0.001,    #learning rate of NN, relevant for NetArch(), NetArch1()
     'num_layers': 2,    #number of hidden layers after the 1st hidden layer, only relevant for NetArch()
-    'neurons_per_layer':100,    #number of neurons per hidden layer
+    'neurons_per_layer':300,    #number of neurons per hidden layer
     'epochs': 10,   #number of training epochs. If There are K self play states, then epochs is roughly K/batch_size. Note further that K <= numEps*sparsity. epochs determines the number of times weights are updated.
     'batch_size': 200, #dictates the batch_size when training 
     'num_features' : 2, #number of self-designed features used in the input
@@ -56,9 +56,12 @@ args = {
     'lambda' : True,    #the vector of residuals, lambda = A^T(A_Sx-y), where x is the optimal solution to min_z||A_Sz - y||_2^2
     #---------------------------------------------------------------
     #MCTS parameters
-    'cpuct': 2, #controls the amount of exploration at each depth of MCTS tree.
+    'cpuct': 3, #controls the amount of exploration at each depth of MCTS tree.
     'numMCTSSims': 500, #For each move, numMCTSSims is equal to the number of MCTS simulations in finding the next move during self play. Smallest value of numMCTSsims is 2.    
-    'numMCTSskips': 1, 
+    'numMCTSskips': 2, 
+        'skip_rule': 'bootstrap', #Current options: None(defaults to current policy/value network), OMP(uses OMP rule to pick next column), bootstrap(uses boostrapped network in bootstrap folder) 
+            'skip_nnet_folder': os.getcwd() + '/skip_network', 
+            'skip_nnet_filename': 'skip_nnet', 
     'tempThreshold': 7,    #dictates when the MCTS starts returning deterministic polices (vector of 0 and 1's). See Coach.py for more details.
     'gamma': 1, #note that reward for a terminal state is -alpha||x||_0 - gamma*||A_S*x-y||_2^2. The smaller gamma is, the more likely algorithm is going to choose stopping action earlier(when ||x||_0 is small). gamma enforces how much we want to enforce Ax is close to y. 
                 #choice of gamma is heavily dependent on the distribution of our signal and the distribution of entries of A. gamma should be apx. bigger than m/||A_Sx^* - y||_2^2, where y = Ax, and x^* is the solution to the l2 regression problem.
@@ -69,12 +72,25 @@ args = {
 #START ALPHAZERO TRAINING:
 #Initialize Game_args, nnet, Game, and Alphazero
 Game_args = Game_args()
+Game = CSGame()
+
 nnet = NNetWrapper(args)
+
 if args['load_nn_model'] == True:
     filename = 'best'
     nnet.load_checkpoint(args['network_checkpoint'], filename)
-Game = CSGame()
-Alphazero_train = Coach(Game, nnet, args, Game_args)
+    
+if args['numMCTSskips'] > 0 and args['skip_rule'] == 'bootstrap':
+    skip_nnet = NNetWrapper(args)
+    skip_nnet.load_checkpoint(args['skip_nnet_folder'], args['skip_nnet_filename'])
+    
+elif args['numMCTSskips'] > 0 and args['skip_rule'] == None:
+    skip_nnet = nnet
+    
+else:
+    skip_nnet = None
+
+Alphazero_train = Coach(Game, nnet, args, Game_args, skip_nnet)
 
 #FOR TESTING-----------------------------------------------------
 weights = Alphazero_train.nnet.nnet.model.get_weights()

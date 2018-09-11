@@ -2,6 +2,8 @@ import math
 import numpy as np
 #np.set_printoptions(threshold=np.nan) #allows correct conversion from numpy array to string. Otherwise string is truncated with '...'
 import time
+
+
 EPS = 1e-8
 
 class MCTS():
@@ -9,11 +11,11 @@ class MCTS():
     This class handles the MCTS tree. Note that for each game, a single tree is built. We do not construct new trees for each state/move during a single game.
     """
 
-    def __init__(self, game, nnet, args, Game_args):
+    def __init__(self, game, nnet, args, Game_args, skip_nnet = None):
         self.game = game    #MCTS stores a a single game(as game object). Look at Game.py. 
                             #The game object stores essential information like valid moves, get next state(which is another game object, etc...
         
-        self.nnet = nnet
+        self.nnet = nnet    #nnet is a NNetWrapper object
         self.args = args    # args is a dictionary which contains user specified parameters which determines the complexity of the entire algorithm
         self.game_args = Game_args
         self.Qsa = {}       # stores Q values for s,a (as defined in the paper)
@@ -24,6 +26,8 @@ class MCTS():
         self.Es = {}        # stores game.getGameEnded ended for board s. IOW, stores all states and their terminal rewards. 0 if state not terminal, and true reward if state is terminal.
         self.Vs = {}        # stores game.getValidMoves for board s
         self.Rsa = {}       #given state s, and a chosen action a, store the k edges which are forcefully chosen
+        
+        self.skip_nnet = skip_nnet   #stores reference to the network model which forcefully picks columns
 
     def getActionProb(self, canonicalBoard, temp=1): #temp = 1, the default option, has getActionProb return a probability distribution. The next action is chosen at random from this distribution. 
         """
@@ -39,17 +43,6 @@ class MCTS():
         for i in range(self.args['numMCTSSims']):
             
             self.search(canonicalBoard)
-        
-        #print('')
-        #print('MCTS STATISTICS after conducting numMCTSSims... for current state ' + str(canonicalBoard.action_indices))
-        #print('self.Qsa: ' + str(self.Qsa))
-        #for key in self.Nsa:
-            #print(self.Nsa[key])
-        #print('self.Ns: ' + str(self.Ns))
-        #print('self.Ps: ' + str(self.Ps))
-        #print('self.Es: ' + str(self.Es))
-        #print('self.Vs: ' + str(self.Vs))
-        #print('')
         
         #Count the number of times an action was taken from the canonicalBoard state as root node
         #and construct a list of how many times each action was taken
@@ -187,20 +180,26 @@ class MCTS():
             while skips < self.args['numMCTSskips'] and len(next_s.col_indices) < self.game_args.game_iter:
                 next_s.compute_x_S_and_res(self.args, self.game_args)
                 next_s.converttoNNInput()
-                p_as, reward = self.nnet.predict(next_s)
+                p_as, reward = self.skip_nnet.predict(next_s)
                 valids_nexts = self.game.getValidMoves(next_s)
                 valid_pas = p_as*valids_nexts
                 sum_pas = np.sum(valid_pas)
                 if sum_pas > 0:
                     valid_pas /= sum_pas 
                 else:
-                    print('ERROR, sum_pas = 0')
-                    print('p_as: ', p_as)
-                    print('valids: ', valids_fortemp)
-                    print('valid_pas: ', valid_pas)
-                    break
+                    print("All valid moves were masked, do workaround.")
                 
-                action = np.random.choice(len(valid_pas), p=valid_pas)
+                    valid_pas = valid_pas + valids #These two lines makes all valid moves equally probable. valid_pas here is a zero vector
+                    valid_pas /= np.sum(valid_pas)
+                
+                #The next action/column taken can be deterministic or random
+                #1)We can generate the next column taken via the prob. dist. valid_pas
+                #2)or we can take the index of valid_pas which has the largest corresponding prob. 
+                #-----------------------------------------------------------------
+                #action = np.random.choice(len(valid_pas), p=valid_pas)
+                action = np.argmax(valid_pas)
+                #-----------------------------------------------------------------
+                
                 self.Rsa[(s,a)].append(action)
                 next_s = self.game.getNextState(next_s, action)
                 skips += 1

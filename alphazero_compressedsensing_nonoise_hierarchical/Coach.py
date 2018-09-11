@@ -14,7 +14,7 @@ class Coach():
     This class executes the self-play + learning. It uses the functions defined
     in Game and NeuralNet. args are specified in main.py.  Game_args specified in Game_Args.py
     """
-    def __init__(self, game, nnet, args, game_args):
+    def __init__(self, game, nnet, args, game_args, skip_nnet = None):
         self.args = args
         self.game_args = game_args #Game_args object contains information about matrix A and observed vector y. THIS SINGLE GAME ARGS IS USED FOR GENERATING THE A AND y FOR SELF PLAY GAMES!!! ONLY. 
         self.arena_game_args = Game_args() #object used to generate instances of A and y across all arenas objects in learn
@@ -23,7 +23,8 @@ class Coach():
         # the competitor network. SZ: Our competitor network is just another network which plays the same game as another network 
         # and we compare which network picks the sparsest vector. The network which picks the sparsest vector is chosen and we remember these weights.
         self.pnet = self.nnet.__class__(self.args)  #past neural network. self.nnet is a NNetWrapper object, and self.pnet = self.nnet.__class__(self.args) instantiates another instance of the NNetWrapper object with self.args as input. self.pnet and self.nnet are not pointing to the same thing.                              
-        self.mcts = MCTS(self.game, self.nnet, self.args, self.game_args) #THIS MCTS OBJECT IS REINITIALIZED(Qsa, Nsa, Ns, Es, etc.... to empty dics) WHENEVER WE PLAY A NEW SELF PLAY GAME IN learn()
+        self.skip_nnet = skip_nnet
+        self.mcts = MCTS(self.game, self.nnet, self.args, self.game_args, self.skip_nnet) #THIS MCTS OBJECT IS REINITIALIZED(Qsa, Nsa, Ns, Es, etc.... to empty dics) WHENEVER WE PLAY A NEW SELF PLAY GAME IN learn()
         self.trainExamplesHistory = []    # history of examples from args.numItersForTrainExamplesHistory latest iterations
         self.skipFirstSelfPlay = False # can be overriden in loadTrainExamples()
 
@@ -154,7 +155,7 @@ class Coach():
                     if self.args['fixed_matrix'] == False: #repeatedly generate sensing matrices if we are not fixing the sensing matrix. 
                         self.game_args.generateSensingMatrix(self.args['m'], self.args['n'], self.args['matrix_type']) #generate a new sensing matrix
                     self.game_args.generateNewObsVec(self.args['x_type'], self.args['sparsity'])#generate a new observed vector y. This assumes a matrix has been loaded in self.game_args!!!
-                    self.mcts = MCTS(self.game, self.nnet, self.args, self.game_args)#create new search tree for each game we play
+                    self.mcts = MCTS(self.game, self.nnet, self.args, self.game_args, self.skip_nnet)#create new search tree for each game we play
                     
                     #TESTING-------------------------
                     #print('The generated sparse vector x has sparsity: ' + str(self.game_args.game_iter))
