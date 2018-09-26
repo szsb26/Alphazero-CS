@@ -43,11 +43,11 @@ args = {
     #---------------------------------------------------------------
     #MCTS parameters
     'cpuct': 3, #controls the amount of exploration at each depth of MCTS tree.
-    'numMCTSSims': 500, #For each move, numMCTSSims is equal to the number of MCTS simulations in finding the next move during self play. 
+    'numMCTSSims': 1500, #For each move, numMCTSSims is equal to the number of MCTS simulations in finding the next move during self play. 
     'numMCTSskips': 2, 
         'skip_rule': None, #Current options: None(defaults to current policy/value network), OMP(uses OMP rule to pick next column), bootstrap(uses boostrapped network in bootstrap folder) 
-        'skip_nnet_folder': os.getcwd() + '/skip_network', 
-        'skip_nnet_filename': 'skip_nnet', 
+            'skip_nnet_folder': os.getcwd() + '/skip_network', 
+            'skip_nnet_filename': 'skip_nnet', 
     'tempThreshold': 0,    #dictates when the MCTS starts returning deterministic polices (vector of 0 and 1's). See Coach.py for more details.
     'gamma': 1, #note that reward for a terminal state is -alpha||x||_0 - gamma*||A_S*x-y||_2^2. The smaller gamma is, the more likely algorithm is going to choose stopping action earlier(when ||x||_0 is small). gamma enforces how much we want to enforce Ax is close to y. We need gamma large enough!!!
     'alpha': 1e-5, #note that reward for a terminal state is -alpha||x||_0 - gamma*||A_S*x-y||_2^2. The smaller alpha is, the more weight the algorithm gives in selecting a sparse solution. 

@@ -42,8 +42,8 @@ class Coach():
         #converted into a format recognizable by the Neural Network. 
         
         state = self.game.getInitBoard(self.args, self.game_args) #State Object
-        action_size = self.game.getActionSize(self.args)
         states = [] #will convert all states into X using NNet.convertStates
+        state_stringRep = self.game.stringRepresentation(state)
         
         #After episodeStep number of played moves into a single game (>= tempTHreshold), MCTS.getActionProb
         #starts returning deterministic policies pi. Hence, the action chosen to get the next state
@@ -69,13 +69,16 @@ class Coach():
             #Given the randomly generated action, move the root node to the next state.   
 
             #NEW-----------------------------------------
-            state_stringRep = self.game.stringRepresentation(state) #needed to access dictionary self.mcts.Rsa
-            next_s = self.game.getNextState(state, action) #These states are new and not the state objects created in MCTS search. We cant access those private variables, but we can access
             
-            for a in self.mcts.Rsa[(state_stringRep,action)]:
-                next_s = self.game.getNextState(next_s,a)
+            #Reassign the new state as the previous state taking action a, and then taking 'numMCTSskips' columns. This state is already saved in Rsa.
+            state = self.mcts.Rsa[(state_stringRep,action)]
             
-            state = next_s #reassign state
+            #next_s = self.game.getNextState(state, action) #These states are new and not the state objects created in MCTS search. We cant access those private variables, but we can access
+            
+            #for a in self.mcts.Rsa[(state_stringRep,action)]:
+                #next_s = self.game.getNextState(next_s,a)
+            
+            #state = next_s #reassign state
             state_stringRep = self.game.stringRepresentation(state) #needed to access dictionary self.mcts.Es
             #END_NEW--------------------------------------------
             

@@ -25,7 +25,7 @@ class MCTS():
 
         self.Es = {}        # stores game.getGameEnded ended for board s. IOW, stores all states and their terminal rewards. 0 if state not terminal, and true reward if state is terminal.
         self.Vs = {}        # stores game.getValidMoves for board s
-        self.Rsa = {}       #given state s, and a chosen action a, store the k edges which are forcefully chosen
+        self.Rsa = {}       #given state s, and a chosen action a, store the single state we arrive at after picking 'numMCTSskips' columns using OMP bootstrap or OMP
         
         self.skip_nnet = skip_nnet   #stores reference to the network model which forcefully picks columns
 
@@ -171,11 +171,12 @@ class MCTS():
         #Once a is taken, we then force neural network to immediately take another 'skips' columns
         #next_s = self.game.getNextState(canonicalBoard, a) #returns next state object
         
-        #NEW----------------------------------------------------------       
-        next_s = self.game.getNextState(canonicalBoard, a)
+        #SKIPPING COLUMNS VIA USING A SUB-POLICY----------------------------------------------------------       
+        
+        #next_s = self.game.getNextState(canonicalBoard, a)
         
         if (s,a) not in self.Rsa:
-            self.Rsa[(s,a)] = []
+            next_s = self.game.getNextState(canonicalBoard,a)
             skips = 0
             while skips < self.args['numMCTSskips'] and len(next_s.col_indices) < self.game_args.game_iter:
                 next_s.compute_x_S_and_res(self.args, self.game_args)
@@ -200,13 +201,16 @@ class MCTS():
                 action = np.argmax(valid_pas)
                 #-----------------------------------------------------------------
                 
-                self.Rsa[(s,a)].append(action)
+                #self.Rsa[(s,a)].append(action)
+                
                 next_s = self.game.getNextState(next_s, action)
                 skips += 1
+            self.Rsa[(s,a)] = next_s #If there are no skips, self.Rsa[(s,a)] just saves the next state picked via UCB rule. 
         else:
-            for action in self.Rsa[(s,a)]:
-                next_s = self.game.getNextState(next_s,action)
-        #END_NEW------------------------------------------------------
+            next_s = self.Rsa[(s,a)]
+            #for action in self.Rsa[(s,a)]:
+                #next_s = self.Rsa[(s,a)]
+        #END------------------------------------------------------
         
         v = self.search(next_s) #traverse from root to a leaf or terminal node using recursive search. 
         #-------------------------------------------------------------------------------------
