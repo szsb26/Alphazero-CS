@@ -23,15 +23,15 @@ args = {
         'load_existing_matrix': True, #If we are using a fixed_matrix, then this option toggles whether to load an existing matrix from args['fixed_matrix_filepath'] or generate a new one. If loading an existing matrix, the matrix must be saved as name 'sensing_matrix.npy'
             'matrix_type': 'sdnormal',  #type of random matrix generated if(assuming we are not loading existing matrix)
     'x_type': 'uniform01',  #type of entries generated for sparse vector x
-    'm': 10, #row dimension of A
-    'n': 100, #column dimension of A
-    'sparsity': 10, #dictates what sparsity level we test up to in testData
+    'm': 25, #row dimension of A
+    'n': 250, #column dimension of A
+    'sparsity': 25, #dictates what sparsity level we test up to in testData
     'fixed_matrix_filepath': os.getcwd() + '/fixed_sensing_matrix', #If args['fixed_matrix'] above is set to True, then this parameter determines where the fixed sensing matrix is saved or where the existing matrix is loaded from. 
     #---------------------------------------------------------------
     #NN Parameters
     'lr': 0.001,    #learning rate of NN
     'num_layers': 2,    #number of hidden layers after the 1st hidden layer
-    'neurons_per_layer':200,    #number of neurons per hidden layer
+    'neurons_per_layer':300,    #number of neurons per hidden layer
     'epochs': 20,   #number of training epochs. If There are K self play states, then epochs is roughly K/batch_size. Note further that K <= numEps*sparsity. epochs determines the number of times weights are updated.
     'batch_size': 200, #dictates the batch_size when training 
     'num_features' : 2, #number of self-designed features used in the input
@@ -43,11 +43,12 @@ args = {
     #---------------------------------------------------------------
     #MCTS parameters
     'cpuct': 3, #controls the amount of exploration at each depth of MCTS tree.
-    'numMCTSSims': 1500, #For each move, numMCTSSims is equal to the number of MCTS simulations in finding the next move during self play. 
-    'numMCTSskips': 2, 
-        'skip_rule': None, #Current options: None(defaults to current policy/value network), OMP(uses OMP rule to pick next column), bootstrap(uses boostrapped network in bootstrap folder) 
+    'numMCTSSims': 2, #For each move, numMCTSSims is equal to the number of MCTS simulations in finding the next move during self play. 
+    'numMCTSskips': 25, 
+        'skip_rule': 'bootstrap', #Current options: None(defaults to current policy/value network), OMP(uses OMP rule to pick next column), bootstrap(uses boostrapped network in bootstrap folder) 
             'skip_nnet_folder': os.getcwd() + '/skip_network', 
             'skip_nnet_filename': 'skip_nnet', 
+    'beta': 1,
     'tempThreshold': 0,    #dictates when the MCTS starts returning deterministic polices (vector of 0 and 1's). See Coach.py for more details.
     'gamma': 1, #note that reward for a terminal state is -alpha||x||_0 - gamma*||A_S*x-y||_2^2. The smaller gamma is, the more likely algorithm is going to choose stopping action earlier(when ||x||_0 is small). gamma enforces how much we want to enforce Ax is close to y. We need gamma large enough!!!
     'alpha': 1e-5, #note that reward for a terminal state is -alpha||x||_0 - gamma*||A_S*x-y||_2^2. The smaller alpha is, the more weight the algorithm gives in selecting a sparse solution. 
@@ -109,6 +110,7 @@ for s in range(1, args['sparsity']):
             #Initialize game_args and MCTS object(MCTS needs to be reinitialized everytime a new (y,x) pair is generated)
             
             Alphazero.game_args.obs_vector = y
+            Alphazero.game_args.sparse_vector = x
             Alphazero.game_args.game_iter = s #If this is set to s, then all states with s columns taken are terminal states.
             Alphazero.mcts = MCTS(Alphazero.game, Alphazero.nnet, Alphazero.args, Alphazero.game_args, skip_nnet)
             

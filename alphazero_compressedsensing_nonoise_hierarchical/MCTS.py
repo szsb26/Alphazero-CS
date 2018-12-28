@@ -136,6 +136,13 @@ class MCTS():
                 self.Ps[s] = self.Ps[s] + valids #These two lines makes all valid moves equally probable. 
                 self.Ps[s] /= np.sum(self.Ps[s])
       
+            #augment self.Ps[s] with prior knowledge of the true solution x. EQUATE BETA TO 1 FOR TESTING!!!
+            #------------------------------------------------------------------------------------------------
+            x_I = np.ceil(abs(self.game_args.sparse_vector)) #Since x is always between -1 to 1, x_I is the indicator vector corresponding to x
+            x_I = np.append(x_I, 0) #append the stopping action to x_I, so x_I is the indicator for the support of x and includes a 1 for the stopping action. 
+            valid_xI = x_I*valids
+            self.Ps[s] = self.args['beta']*self.Ps[s] + (1 - self.args['beta']) * (1/np.sum(valid_xI)) * valid_xI
+            #------------------------------------------------------------------------------------------------
             
             self.Vs[s] = valids #Since s is a leaf, store the newly found valid moves and set amount of times s was visited as zero.
             self.Ns[s] = 0
@@ -178,34 +185,35 @@ class MCTS():
         if (s,a) not in self.Rsa:
             next_s = self.game.getNextState(canonicalBoard,a)
             skips = 0
-            while skips < self.args['numMCTSskips'] and len(next_s.col_indices) < self.game_args.game_iter:
-                next_s.compute_x_S_and_res(self.args, self.game_args)
-                next_s.converttoNNInput()
-                p_as, reward = self.skip_nnet.predict(next_s)
-                valids_nexts = self.game.getValidMoves(next_s)
-                valid_pas = p_as*valids_nexts
-                sum_pas = np.sum(valid_pas)
-                if sum_pas > 0:
-                    valid_pas /= sum_pas 
-                else:
-                    print("All valid moves were masked, do workaround.")
+            if next_s.action_indices[-1] == 0:
+                while skips < self.args['numMCTSskips'] and len(next_s.col_indices) < self.game_args.game_iter:
+                    next_s.compute_x_S_and_res(self.args, self.game_args)
+                    next_s.converttoNNInput()
+                    p_as, reward = self.skip_nnet.predict(next_s)
+                    valids_nexts = self.game.getValidMoves(next_s)
+                    valid_pas = p_as*valids_nexts
+                    sum_pas = np.sum(valid_pas)
+                    if sum_pas > 0:
+                        valid_pas /= sum_pas 
+                    else:
+                        print("All valid moves were masked, do workaround.")
                 
-                    valid_pas = valid_pas + valids #These two lines makes all valid moves equally probable. valid_pas here is a zero vector
-                    valid_pas /= np.sum(valid_pas)
+                        valid_pas = valid_pas + valids #These two lines makes all valid moves equally probable. valid_pas here is a zero vector
+                        valid_pas /= np.sum(valid_pas)
                 
-                #The next action/column taken can be deterministic or random
-                #1)We can generate the next column taken via the prob. dist. valid_pas
-                #2)or we can take the index of valid_pas which has the largest corresponding prob. 
-                #-----------------------------------------------------------------
-                #action = np.random.choice(len(valid_pas), p=valid_pas)
-                action = np.argmax(valid_pas)
-                #-----------------------------------------------------------------
+                    #The next action/column taken can be deterministic or random
+                    #1)We can generate the next column taken via the prob. dist. valid_pas
+                    #2)or we can take the index of valid_pas which has the largest corresponding prob. 
+                    #-----------------------------------------------------------------
+                    #action = np.random.choice(len(valid_pas), p=valid_pas)
+                    action = np.argmax(valid_pas)
+                    #-----------------------------------------------------------------
                 
-                #self.Rsa[(s,a)].append(action)
+                    #self.Rsa[(s,a)].append(action)
                 
-                next_s = self.game.getNextState(next_s, action)
-                skips += 1
-            self.Rsa[(s,a)] = next_s #If there are no skips, self.Rsa[(s,a)] just saves the next state picked via UCB rule. 
+                    next_s = self.game.getNextState(next_s, action)
+                    skips += 1
+                self.Rsa[(s,a)] = next_s #If there are no skips, self.Rsa[(s,a)] just saves the next state picked via UCB rule. 
         else:
             next_s = self.Rsa[(s,a)]
             #for action in self.Rsa[(s,a)]:

@@ -3,6 +3,8 @@ import numpy as np
 import pickle
 from keras.models import Model, model_from_json
 from keras.optimizers import Adam
+from numpy.random import seed
+seed(1)
 
 class NNetWrapper(): 
     def __init__(self, args): 
