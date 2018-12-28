@@ -37,25 +37,7 @@ class MCTS():
         #self.search updates the all the self variables above
         for i in range(self.args['numMCTSSims']):
             
-            #FOR TESTING----------------------------
-            #start = time.time()
-            #END TESTING----------------------------
             self.search(canonicalBoard)
-            #FOR TESTING----------------------------
-            #end = time.time()
-            #print('Total time for MCTS simulation iteration ' + str(i) + ' is: ' + str(end-start))
-            #END TESTING----------------------------
-        
-        #print('')
-        #print('MCTS STATISTICS after conducting numMCTSSims... for current state ' + str(canonicalBoard.action_indices))
-        #print('self.Qsa: ' + str(self.Qsa))
-        #for key in self.Nsa:
-            #print(self.Nsa[key])
-        #print('self.Ns: ' + str(self.Ns))
-        #print('self.Ps: ' + str(self.Ps))
-        #print('self.Es: ' + str(self.Es))
-        #print('self.Vs: ' + str(self.Vs))
-        #print('')
         
         #Count the number of times an action was taken from the canonicalBoard state as root node
         #and construct a list of how many times each action was taken
@@ -65,11 +47,6 @@ class MCTS():
         #otherwise, if an action was never investigated, then set it as 0. 
         #counts should sum to numMCTSsims 
         counts = [self.Nsa[(s,a)] if (s,a) in self.Nsa else 0 for a in range(self.game.getActionSize(self.args))]
-        
-        #FOR TESTING-------------------------------------------------------
-        #print('current counts is: ' + str(counts))
-        #print('sum of counts is: ' + str(sum(counts)))
-        #END TESTING-------------------------------------------------------
         
         if temp==0:
             #return the index of the list counts with largest value
@@ -105,19 +82,8 @@ class MCTS():
             v: the negative of the value of the current canonicalBoard. 
         """
         #BEGIN SEARCH ON GAME STATE canonicalBoard. canonicalBoard is root of MCTS tree
-        #FOR TESTING----------------------------
-        #print('The columns taken of the current state are: ' + str(canonicalBoard.col_indices))
-        #END TESTING----------------------------
-        
-        #FOR TESTING----------------------------
-        #start = time.time()
-        #END TESTING----------------------------
         s = self.game.stringRepresentation(canonicalBoard)#get the string representation of the state canonicalBoard in the game and save as s. Required for hashing in steps below:
         
-        #FOR TESTING----------------------------
-        #end = time.time()
-        #print('state action indices to string conversion time is: ' + str(end-start))
-        #END TESTING----------------------------
         
         #----------CHECK IF canonicalBoard IS A TERMINAL STATE OR NOT----------
         #1)self.Es[s] is updated here since s is a terminal state
@@ -126,14 +92,7 @@ class MCTS():
         #Since UCB decreases, this allows exploration of other actions. 
         #3)terminal states are forever leaves.
         if s not in self.Es: #if s is not in self.Es, hash s into Es and determine whether s is a terminal state or not. 
-            #FOR TESTING----------------------------
-            #start = time.time()
-            #END TESTING----------------------------
             self.Es[s] = self.game.getGameEnded(canonicalBoard, self.args, self.game_args) #game.getGameEnded returns either -alpha||x_S||_0 + gamma*||A_Sx-y||_2^2 or 0. Note that once getGameEnded is called, canonicalBoard.termreward is set.
-            #FOR TESTING----------------------------
-            #end = time.time()
-            #print('time it takes to compute terminal reward and insert into self.Es[s] of MCTS tree is: ' + str(end-start))
-            #END TESTING----------------------------
         if self.Es[s]!=0: #Now that we have hashed s into self.Es, check whether the reward returned above is 0 or not. If not zero, return the true terminal reward from getGameEnded above and search stops.
             return self.Es[s] #FIRST RETURN. If we arrived at a terminal node, then we return the TRUE REWARD instead of the predicted v of the neural network. 
         #----------------------------------------------------------------------
@@ -143,44 +102,16 @@ class MCTS():
         #2)Using step one, initialize the self variables of s by saving numpy vector of valid moves and times visited.
         #3)return v.
         #4)self.Ps[s], self.Vs[s], and self.Ns[s] are all initialized.
-        #FOR TESTING----------------------------
-        #start_leaf = time.time()
-        #END TESTING----------------------------
         if s not in self.Ps: #If s is not a key in self.Ps(which hashes s to its next available game states, then s must be a leaf.
             # leaf node
             #Prepare canonicalBoard for feeding into NN
             
             #COMPUTE self.feature_dic and compute NN representation so we can call nnet.predict below
-            #FOR TESTING----------------------------
-            #start = time.time()
-            #END TESTING----------------------------
             canonicalBoard.compute_x_S_and_res(self.args, self.game_args)
             canonicalBoard.converttoNNInput()
-            #FOR TESTING----------------------------
-            #end = time.time()
-            #print('Time it takes to compute leaf state features and convert to NN input is: ' + str(end-start))
-            #END TESTING----------------------------
-            #FOR TESTING----------------------------
-            #start = time.time()            
-            #END TESTING----------------------------
             self.Ps[s], v = self.nnet.predict(canonicalBoard) #neural network takes in position s and returns a prediction(which is p_theta vector and v_theta (numpy vector). Look at own notes)
-            #FOR TESTING----------------------------
-            Ps_test, v_test = self.nnet.predict(canonicalBoard)
-            #end = time.time()
-            #print('Time it takes for NN to predict on leaf state is: ' + str(end - start))
-            #print('Current leaf we are on is: ' + str(canonicalBoard.col_indices))
-            #print('The output of the leaf when evaluated by NN is: ')
-            #print('predicted prob. dist. : ' + str(self.Ps[s]))
-            #print('predicted reward: ' + str(v))
-            #END TESTING----------------------------
-            #FOR TESTING----------------------------
-            #start = time.time()
-            #END TESTING----------------------------
             valids = self.game.getValidMoves(canonicalBoard) #returns a numpy vector of 0 and 1's which indicate valid moves from the set of all actions
-            #FOR TESTING----------------------------
-            #print('valid moves for leaf are: ' + str(valids))
-            #END TESTING----------------------------
-            self.Ps[s] = self.Ps[s]*valids      # masking(hiding) invalid moves(this inner product creates a vector of probabilities of valid moves) the neural network may predict. 
+            self.Ps[s] = self.Ps[s]*valids      # element wise multiplication between two equally sized vectors which masks(hiding) invalid moves 
             sum_Ps_s = np.sum(self.Ps[s])       # probabilities may not add up to 1 anymore after hiding invalid moves(since NN may predict nonzero prob for illegal moves). Hence, renormalize such that
                                                 # valid actions sum up to 1.
             if sum_Ps_s > 0:
@@ -192,48 +123,11 @@ class MCTS():
                 # If you have got dozens or hundreds of these messages you should pay attention to your NNet and/or training process.   
                 print("All valid moves were masked, do workaround.")
                 
-                #FOR TESTING-------------------------------------------
-                #print('A_S matrix is: ', self.game_args.sensing_matrix[:, canonicalBoard.col_indices])
-                #print('rank(A_S) is: ', np.linalg.matrix_rank(self.game_args.sensing_matrix[:, canonicalBoard.col_indices]))
-                #print('actual prob. output of neural network: ', Ps_test)
-                #print('actual v output of neural network: ', v_test)
-                #print('Ps[s]: ' + str(self.Ps[s]))
-                #print('')
-                #print('valids: ' + str(valids))
-                #print('')
-                #print('PROBLEM STATE DURING MCTS SEARCH (AT LEAF):')
-                #print('---------------------------------------------')
-                #print('action indices: ', canonicalBoard.action_indices)
-                #print('')
-                #print('col indices: ', canonicalBoard.col_indices)
-                #print('')
-                #print('feature_dic: ', canonicalBoard.feature_dic)
-                #print('')
-                #print('nn_input: ', canonicalBoard.nn_input)
-                #print('')
-                #print('true y: ', self.game_args.obs_vector)
-                #print('')
-                #print('true sparse x: ', self.game_args.sparse_vector)
-                #print('')
-                #print('reward: ', canonicalBoard.termreward)
-                #print('---------------------------------------------')
-                #return
-                #END TESTING-------------------------------------------
-                
                 self.Ps[s] = self.Ps[s] + valids #These two lines makes all valid moves equally probable. 
                 self.Ps[s] /= np.sum(self.Ps[s])
-            #FOR TESTING----------------------------
-            #end = time.time()
-            #print('Time it takes to compute self.Ps[s] of leaf is: ' + str(end-start))
-            #END TESTING----------------------------
             
             self.Vs[s] = valids #Since s is a leaf, store the newly found valid moves and set amount of times s was visited as zero.
             self.Ns[s] = 0
-            
-            #FOR TESTING----------------------------
-            #end_leaf = time.time()
-            #print('Time it takes to compute all operations given we are at leaf: ' + str(end_leaf - start_leaf))
-            #END TESTING----------------------------
             
             return v #SECOND RETURN
         #--------------------------------------------------------
@@ -242,10 +136,6 @@ class MCTS():
         #1)search from a root to a leaf via UCB using recursive search
         #2)Once we arrive at a leaf, due to the recursive nature, we update self.Qsa and self.Nsa dictionaries in a bottom up fashion. 
         #3)Note that if s is not a leaf, it has been a leaf before, so self.Vs[s], self.Ps[s], self.Ns[s] are all well defined.
-        
-        #FOR TESTING----------------------------
-        #start_notleaf = time.time()
-        #END TESTING----------------------------
         
         valids = self.Vs[s] #retrieve numpy vector of valid moves
         
@@ -266,11 +156,6 @@ class MCTS():
         a = best_act #define action with highest UCB computed above as a. a is chosen over valids. Note that best_act is a single action we take when traversing a single depth of MCTS tree.
         next_s = self.game.getNextState(canonicalBoard, a) #returns next state object
         
-        #FOR TESTING----------------------------
-        #end_notleaf = time.time()
-        #print('Time it takes to determine which neighbor to traverse to if current node we are on is not a leaf: ' + str(end_notleaf-start_notleaf))
-        #END TESTING----------------------------
-        
         v = self.search(next_s) #traverse from root to a leaf or terminal node using recursive search. 
         #-------------------------------------------------------------------------------------
         #because we recursively search in the lines above, the below snippet updates self.Qsa and self.Nsa of all visited nodes from the bottom to the root.
@@ -285,5 +170,5 @@ class MCTS():
             self.Nsa[(s,a)] = 1
 
         self.Ns[s] += 1
-        return v #THIRD RETURN
+        return v #THIRD RETURN. This return is to return values gotten from the line v = self.search(next_s). The intuition here is that once we reach a leaf or terminal node, we propagate the real terminal value or the predicted NN value up the search path. This line is what causes the reward to propagate up. 
         

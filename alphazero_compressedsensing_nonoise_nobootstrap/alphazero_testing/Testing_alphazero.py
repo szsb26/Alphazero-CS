@@ -23,14 +23,14 @@ args = {
         'load_existing_matrix': True, #If we are using a fixed_matrix, then this option toggles whether to load an existing matrix from args['fixed_matrix_filepath'] or generate a new one. If loading an existing matrix, the matrix must be saved as name 'sensing_matrix.npy'
             'matrix_type': 'sdnormal',  #type of random matrix generated if(assuming we are not loading existing matrix)
     'x_type': 'uniform01',  #type of entries generated for sparse vector x
-    'm': 7, #row dimension of A
-    'n':15, #column dimension of A
-    'sparsity':7, #dictates the maximum sparsity of x when generating the random vector x. Largest number of nonzeros of x is sparsity-1. sparsity cannot be greater than m above. 
+    'm': 25, #row dimension of A
+    'n':250, #column dimension of A
+    'sparsity':25, #dictates the maximum sparsity of x when generating the random vector x. Largest number of nonzeros of x is sparsity-1. sparsity cannot be greater than m above. 
     'fixed_matrix_filepath': os.getcwd() + '/fixed_sensing_matrix', #If args['fixed_matrix'] above is set to True, then this parameter determines where the fixed sensing matrix is saved or where the existing matrix is loaded from. 
     #---------------------------------------------------------------
     #General Alphazero Training Parameters
     'numIters': 100, #number of alphazero iterations performed. Each iteration consists of 1)playing numEps self play games, 2) retraining neural network
-    'numEps': 400, #dictates how many self play games are played each iteration of the algorithm
+    'numEps': 200, #dictates how many self play games are played each iteration of the algorithm
     'maxlenOfQueue':10000, #dictates total number of game states saved(not games). 
     'numItersForTrainExamplesHistory': 1, #controls the size of trainExamplesHistory, which is a list of different iterationTrainExamples deques. 
     'checkpoint': os.getcwd() + '/training_data', #filepath for SAVING newly generated self play training data
@@ -46,7 +46,7 @@ args = {
     'num_layers': 2,    #number of hidden layers after the 1st hidden layer
     'neurons_per_layer':200,    #number of neurons per hidden layer
     'epochs': 10,   #number of training epochs. If There are K self play states, then epochs is roughly K/batch_size. Note further that K <= numEps*sparsity. epochs determines the number of times weights are updated.
-    'batch_size': 400, #dictates the batch_size when training 
+    'batch_size': 200, #dictates the batch_size when training 
     'num_features' : 2, #number of self-designed features used in the input
     'load_nn_model' : True, #If set to True, load the best network (best_model.json and best_weights.h5)
     'network_checkpoint' : os.getcwd() + '/network_checkpoint', #filepath for SAVING the temp neural network model/weights, checkpoint networks model/weights, and the best networks model/weights
@@ -71,7 +71,7 @@ Algorithms = CSAlgorithms()
 #initialize Game_args
 #load sensing_matrix into game_args
 game_args = Game_args()
-matrix_filename = 'sdnormal0.npy'
+matrix_filename = 'sensing_matrix.npy'
 A = np.load(matrix_filename)
 game_args.sensing_matrix = A
 #initialize neural network wrapper object
@@ -126,36 +126,38 @@ for s in range(1, args['sparsity']):
             
             if error_alphazero < 1e-03:
                 counter_s += 1
-                
-            else:
-                print('')
-                print('FAILED RECOVERY: (y,x) ITER ' + str(num_samples_s) + ':' + '///////////////////////////////////////////////')
-                state_index = 0
-                print('The original signal x is: ' + str(x))
-                print('The observed signal y is: ' + str(y))
+            
+            #FOR TESTING-----------------------------------------------------------------------------
+            #else:
+                #print('')
+                #print('FAILED RECOVERY: (y,x) ITER ' + str(num_samples_s) + ':' + '///////////////////////////////////////////////')
+                #state_index = 0
+                #print('The original signal x is: ' + str(x))
+                #print('The observed signal y is: ' + str(y))
                 #Print information about the failed recovery
-                for state in trainExamples:
+                #for state in trainExamples:
                     #compute the probability distribution output by MCTS
-                    state_string = Alphazero.mcts.game.stringRepresentation(state)
-                    counts = [Alphazero.mcts.Nsa[(state_string,a)] if (state_string,a) in Alphazero.mcts.Nsa else 0 for a in range(Alphazero.mcts.game.getActionSize(Alphazero.mcts.args))]
-                    print('')
-                    print('STATE ' + str(state_index) + ' statistics:' + '----------------------------------')
-                    print('action_indices: ' + str(state.action_indices))
-                    print('columns_taken: ' + str(state.col_indices)) 
-                    print('feature_dic: ')
-                    print(str(state.feature_dic))
-                    print('z(the true observed reward from final terminal state): ' + str(state.z))
-                    print('N(s,a) of each action: ' + str(counts))
-                    print('final prob. dist. output by MCTS: ' + str(state.pi_as))
-                    state_index += 1
-                    print('/////////////////////////////////////////////////////////////')
-                
+                    #state_string = Alphazero.mcts.game.stringRepresentation(state)
+                    #counts = [Alphazero.mcts.Nsa[(state_string,a)] if (state_string,a) in Alphazero.mcts.Nsa else 0 for a in range(Alphazero.mcts.game.getActionSize(Alphazero.mcts.args))]
+                    #print('')
+                    #print('STATE ' + str(state_index) + ' statistics:' + '----------------------------------')
+                    #print('action_indices: ' + str(state.action_indices))
+                    #print('columns_taken: ' + str(state.col_indices)) 
+                    #print('feature_dic: ')
+                    #print(str(state.feature_dic))
+                    #print('z(the true observed reward from final terminal state): ' + str(state.z))
+                    #print('N(s,a) of each action: ' + str(counts))
+                    #print('final prob. dist. output by MCTS: ' + str(state.pi_as))
+                    #state_index += 1
+                    #print('/////////////////////////////////////////////////////////////')
+            #END TESTING-----------------------------------------------------------------------------
             num_samples_s += 1
         
     #For fixed s, compute the recovery accuracy    
     alphazero_fixeds_recacc = counter_s/num_samples_s
     #Update alphazero_accuracy vector
     alphazero_accuracy[s] = alphazero_fixeds_recacc    
+    print('Alphazero accuracy with MCTS for sparsity ' + str(s) + ' is: ' + str(alphazero_accuracy[s]))
     
 print('')
 print('---------------------------------------------------')

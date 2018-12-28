@@ -41,7 +41,6 @@ class Coach():
         #converted into a format recognizable by the Neural Network. 
         
         state = self.game.getInitBoard(self.args, self.game_args) #State Object
-        action_size = self.game.getActionSize(self.args)
         states = [] #will convert all states into X using NNet.convertStates
         
         #After episodeStep number of played moves into a single game (>= tempTHreshold), MCTS.getActionProb
