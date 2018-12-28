@@ -3,6 +3,8 @@ from keras.layers import Input, Dense, concatenate
 from keras.optimizers import Adam
 from keras import regularizers
 from keras import backend
+from numpy.random import seed
+seed(1)
 
 
 class NetArch():

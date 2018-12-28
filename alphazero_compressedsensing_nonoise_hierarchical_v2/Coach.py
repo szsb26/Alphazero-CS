@@ -72,7 +72,7 @@ class Coach():
             next_s = self.game.getNextState(state, action)
             
             #if length of column indices is greater than maxTreeDepth, reassign next_s to the state in Rsa instead. Otherwise, keep next_s
-            if len(next_s.col_indices) > self.args['maxTreeDepth']:
+            if len(next_s.col_indices) > self.args['maxTreeDepth'] and next_s.action_indices[-1] == 0:
                 next_s = self.mcts.Rsa[(state_stringRep, action)] #These states are new and not the state objects created in MCTS search. We cant access those private variables, but we can access
             
             #for a in self.mcts.Rsa[(state_stringRep,action)]:
@@ -174,7 +174,7 @@ class Coach():
                     #TESTING--------------------------
                     #end_game = time.time()
                     #print('Total time to play game ' + str(eps) + ' is: ' + str(end_game-start_game))
-                #-----------------------------------------------------
+                    #-----------------------------------------------------
                     # bookkeeping + plot progress
                     eps_time.update(time.time() - end)
                     end = time.time()

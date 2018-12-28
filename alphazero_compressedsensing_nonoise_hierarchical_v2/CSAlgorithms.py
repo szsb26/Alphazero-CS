@@ -3,9 +3,10 @@
 import numpy as np
 from sklearn.linear_model import orthogonal_mp 
 from cvxopt import matrix, solvers
+from itertools import chain, combinations
 
 class CSAlgorithms():
-    def OMP(self, A, y, s):
+    def OMP(self, A, y, s, args):
     #INPUT(A,y,s) where A is the col. normalized sensing_matrix, y is observed vector, s is sparsity level. Make sure A is column normalized first.
     #OUTPUT: A set of s vectors, each of the form [(x_s, lambda), pi], where pi is a vector of zeros with a single one in the next column we will take. 
     #x_S is the solution to min_z||A_Sz-y||^2_2, and lambda is the vector A^T(A_S*x_S - y). Outputted as features, labels, where each element of features is of the form (x_s, lambda), and each member of labels is of the form pi and v, where v is propagated to every (x_s, lambda)
@@ -23,7 +24,7 @@ class CSAlgorithms():
             x_star = np.reshape(x_star, (x_star.size, 1)) #1-sparse solutions need to be reshaped for below to work. 
         final_res = np.matmul(A,x_star[:,s-1])-y
         norm_sq = np.linalg.norm(final_res)**2
-        final_v = -1e-5*np.count_nonzero(x_star[:,s-1]) - norm_sq
+        final_v = -args['alpha']*np.count_nonzero(x_star[:,s-1]) - args['gamma']*norm_sq
         final_v = np.reshape(final_v,(1,))
 
         
@@ -33,8 +34,10 @@ class CSAlgorithms():
         lambda_vec_init = np.matmul(A.T, residual_init)#initialize the first lambda vector
         feature = [x_init, lambda_vec_init] #Compute feature for initial state of no chosen columns
         next_index = np.argmax(np.abs(lambda_vec_init))
-        pi = np.zeros(A.shape[1]+1) #Compute the label pi(one hot vector) of the next column chosen. +1 is for the stopping action, which is to remain consistent with alphazero algorithm. 
-        pi[next_index] = 1
+        #pi = np.zeros(A.shape[1]+1) #Compute the label pi(one hot vector) of the next column chosen. +1 is for the stopping action, which is to remain consistent with alphazero algorithm. 
+        pi = np.full((A.shape[1]+1,), (args['uncertainty']/A.shape[1]), dtype = float)
+        pi[next_index] = 1 - args['uncertainty']
+        pi[-1] = 0
         label = [pi, final_v]#NOTE THAT v is the reward received AFTER we follow pi!!!
         #Add initial state feature and labels into output lists
         features.append(feature)
@@ -47,12 +50,16 @@ class CSAlgorithms():
             feature = [x_star[:,i], lambda_vec] #a length two list of np arrays
             #Compute next chosen column and extend it to a one hot vector of size n. Also compute v.
             next_index = np.argmax(np.abs(lambda_vec))
-            pi = np.zeros(A.shape[1]+1) #again 1 is for the stopping action. 
-            pi[next_index] = 1
-            label =[pi, final_v] #pi and v are both arrays here
+            pi = np.full((A.shape[1]+1,), (args['uncertainty']/A.shape[1]), dtype = float) #again 1 is for the stopping action. 
+            pi[next_index] = 1 - args['uncertainty']
+            pi[-1] = 0
+            label = [pi, final_v] #pi and v are both arrays here
             #add both feature and label into features and labels list
             features.append(feature)
             labels.append(label)
+            
+        #change the last pi to zero since x_star[:,s-1] is the final solution, so the probability distribution pi for final state should be set to a vector of zeros.
+        labels[-1][0] = np.zeros(A.shape[1]+1)
         return features, labels
         
     def l1(self, A, y):
@@ -93,9 +100,32 @@ class CSAlgorithms():
         recovered_solution = recovered_solution.flatten()
         
         return recovered_solution
+    
+    def powerset(self, iterable):
+        #example: "powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
+        s = list(iterable)
+        power_set = chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
+        return list(map(list, power_set))
+    
+    def l0(self, A, y):
+        #brute force recovery solution
+        col_indices = list(range(A.shape[1]))
+        epsilon = 1e-5
+        power_set = self.powerset(col_indices)
+        for i in range(1, len(power_set)):
+            S = power_set[i]
+            A_S = A[:,S]
+            x = np.linalg.lstsq(A_S, y)
+            if x[1] <= epsilon:
+                break
         
-    def rOMP(self):
-        pass
+        final_x = np.zeros(len(col_indices))
+        i = 0
+        for k in S:
+            final_x[k] = x[0][i]
+            i += 1
+        
+        return final_x
         
     
         

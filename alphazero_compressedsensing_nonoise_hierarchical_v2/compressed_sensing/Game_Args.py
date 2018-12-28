@@ -66,7 +66,7 @@ class Game_args(): #We save the args in Game_args class here because later on we
             x[0:rand_sparsity] = np.random.uniform(-1,1,rand_sparsity)
             
         np.random.shuffle(x)
-        #self.sparse_vector = x
+        self.sparse_vector = x
         y = np.matmul(self.sensing_matrix,x)
         self.obs_vector = y
             

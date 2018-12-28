@@ -3,6 +3,7 @@ import os
 import sys
 import csv
 import numpy as np
+import time
 from CSAlgorithms import CSAlgorithms
 from sklearn.linear_model import orthogonal_mp
 import matplotlib
@@ -16,6 +17,7 @@ from CSGame import CSGame
 from Game_Args import Game_args
 sys.path.insert(0, one_up + '/compressed_sensing/keras_tf')
 from NNet import NNetWrapper
+
 
 args = {
     #Compressed Sensing Parameters, Ax = y, where A is of size m by n
@@ -35,7 +37,7 @@ args = {
     'epochs': 20,   #number of training epochs. If There are K self play states, then epochs is roughly K/batch_size. Note further that K <= numEps*sparsity. epochs determines the number of times weights are updated.
     'batch_size': 200, #dictates the batch_size when training 
     'num_features' : 2, #number of self-designed features used in the input
-    'load_nn_model' : True, #If set to True, load the best network (best_model.json and best_weights.h5)
+    'load_nn_model' : False, #If set to True, load the best network (best_model.json and best_weights.h5)
     'network_checkpoint' : os.getcwd() + '/network_checkpoint', #filepath for SAVING the temp neural network model/weights, checkpoint networks model/weights, and the best networks model/weights
     #features: True if we wish to use as a feature, False if we do not wish to use as a feature
     'x_l2' : True,      #solution to min_z||A_Sz - y||_2^2, where A_S is the submatrix of columns we have currently chosen
@@ -43,15 +45,19 @@ args = {
     #---------------------------------------------------------------
     #MCTS parameters
     'cpuct': 3, #controls the amount of exploration at each depth of MCTS tree.
-    'numMCTSSims': 500, #For each move, numMCTSSims is equal to the number of MCTS simulations in finding the next move during self play. 
-    'maxTreeDepth': 2, 
-        'skip_rule': 'bootstrap', #Current options: None(defaults to current policy/value network), OMP(uses OMP rule to pick next column), bootstrap(uses boostrapped network in bootstrap folder) 
+    'numMCTSSims': 2, #For each move, numMCTSSims is equal to the number of MCTS simulations in finding the next move during self play. 
+    'maxTreeDepth': 4, 
+        'skip_rule': 'OMP', #Current options: None(defaults to current policy/value network), OMP(uses OMP rule to pick next column), bootstrap(uses boostrapped network in bootstrap folder) 
             'skip_nnet_folder': os.getcwd() + '/skip_network', 
             'skip_nnet_filename': 'skip_nnet', 
+    'beta': 1,
     'tempThreshold': 0,    #dictates when the MCTS starts returning deterministic polices (vector of 0 and 1's). See Coach.py for more details.
     'gamma': 1, #note that reward for a terminal state is -alpha||x||_0 - gamma*||A_S*x-y||_2^2. The smaller gamma is, the more likely algorithm is going to choose stopping action earlier(when ||x||_0 is small). gamma enforces how much we want to enforce Ax is close to y. We need gamma large enough!!!
     'alpha': 1e-5, #note that reward for a terminal state is -alpha||x||_0 - gamma*||A_S*x-y||_2^2. The smaller alpha is, the more weight the algorithm gives in selecting a sparse solution. 
     'epsilon': 1e-5, #If x is the optimal solution to l2, and the residual of l2 regression ||A_Sx-y||_2^2 is less than epsilon, then the state corresponding to indices S is a terminal state in MCTS. 
+    #----------------------------------------------------------------
+    'loadtestData': True, 
+    'test_samples_persparsity': 1000, 
 }
 
 #Initialize Algorithms object to compare algorithms
@@ -90,78 +96,97 @@ Alphazero = Coach(new_game, nnet, args, game_args, skip_nnet)
 #Initialize accuracy vector
 alphazero_accuracy = np.zeros(A.shape[0])
 #For every signal in testData, initiate a single game of self play via Coach.executeEpisode
+alphazero_time = np.zeros(A.shape[0])
 
-for s in range(1, args['sparsity']):
-    obsy_filepath = 'testData/' + str(s) + 'sparse' + '/' + str(s) + 'sparse_obsy.csv'
-    sparsex_filepath = 'testData/' + str(s) + 'sparse' + '/' + str(s) + 'sparse_x.csv'
-    with open(obsy_filepath) as obsy, open(sparsex_filepath) as sparsex:
-        reader_y = csv.reader(obsy)
-        reader_x = csv.reader(sparsex)
+if args['loadtestData'] == True:
+    for s in range(1, args['sparsity']):
+    #for s in range(7, 8):
+        obsy_filepath = 'testData/' + str(s) + 'sparse' + '/' + str(s) + 'sparse_obsy.csv'
+        sparsex_filepath = 'testData/' + str(s) + 'sparse' + '/' + str(s) + 'sparse_x.csv'
+        with open(obsy_filepath) as obsy, open(sparsex_filepath) as sparsex:
+            reader_y = csv.reader(obsy)
+            reader_x = csv.reader(sparsex)
+            
+            counter_s = 0 #accuracy counter for alphazero for a fixed s
+            counter_time_s = 0
+            num_samples_s = 0
         
-        counter_s = 0 #accuracy counter for alphazero for a fixed s
-        num_samples_s = 0
-        
-        for y, x in zip(reader_y, reader_x):
-            y = list(map(float,y))
-            y = np.asarray(y)
-            x = list(map(float, x))
-            x = np.asarray(x)
-            #Initialize game_args and MCTS object(MCTS needs to be reinitialized everytime a new (y,x) pair is generated)
+            for y, x in zip(reader_y, reader_x):
+                y = list(map(float,y))
+                y = np.asarray(y)
+                x = list(map(float, x))
+                x = np.asarray(x)
+                #Initialize game_args and MCTS object(MCTS needs to be reinitialized everytime a new (y,x) pair is generated)
             
-            Alphazero.game_args.obs_vector = y
-            Alphazero.game_args.game_iter = s #If this is set to s, then all states with s columns taken are terminal states.
-            Alphazero.mcts = MCTS(Alphazero.game, Alphazero.nnet, Alphazero.args, Alphazero.game_args, skip_nnet)
+                Alphazero.game_args.obs_vector = y
+                Alphazero.game_args.sparse_vector = x
+                Alphazero.game_args.game_iter = s #If this is set to s, then all states with s columns taken are terminal states.
+                Alphazero.mcts = MCTS(Alphazero.game, Alphazero.nnet, Alphazero.args, Alphazero.game_args, skip_nnet)
             
-            #trainExamples is a list of states visited in the course of a game. Each state has well defined state.pi_as, state.z, and state.feature_dic
+                #trainExamples is a list of states visited in the course of a game. Each state has well defined state.pi_as, state.z, and state.feature_dic
+                
+                start = time.time()
+                trainExamples = Alphazero.executeEpisode() #MCTS.getActionProb is called here
+                end = time.time()
+                
+                total_time = end - start
+                print('total_time taken for signal of sparsity ' + str(s) + ' is: ', total_time)
+                
+                #compute the final predicted signal by looking at the last state
             
-            trainExamples = Alphazero.executeEpisode() #MCTS.getActionProb is called here
-            
-            #compute the final predicted signal by looking at the last state
-            
-            last_state = trainExamples[-1]
+                last_state = trainExamples[-1]
 
-            predicted_x = last_state.feature_dic['x_l2']
+                predicted_x = last_state.feature_dic['x_l2']
             
-            error_alphazero = np.linalg.norm(x - predicted_x)**2
+                error_alphazero = np.linalg.norm(x - predicted_x)**2
             
-            if error_alphazero < 1e-03:
-                counter_s += 1
+                #increment counters
+                if error_alphazero < 1e-03:
+                    counter_s += 1
+                counter_time_s += total_time
             
-            #FOR TESTING-----------------------------------------------------------------------------
-            #else:
-                #print('')
-                #print('FAILED RECOVERY: (y,x) ITER ' + str(num_samples_s) + ':' + '///////////////////////////////////////////////')
-                #state_index = 0
-                #print('The original signal x is: ' + str(x))
-                #print('The observed signal y is: ' + str(y))
-                #Print information about the failed recovery
-                #for state in trainExamples:
-                    #compute the probability distribution output by MCTS
-                    #state_string = Alphazero.mcts.game.stringRepresentation(state)
-                    #counts = [Alphazero.mcts.Nsa[(state_string,a)] if (state_string,a) in Alphazero.mcts.Nsa else 0 for a in range(Alphazero.mcts.game.getActionSize(Alphazero.mcts.args))]
+                #FOR TESTING-----------------------------------------------------------------------------
+                #else:
                     #print('')
-                    #print('STATE ' + str(state_index) + ' statistics:' + '----------------------------------')
-                    #print('action_indices: ' + str(state.action_indices))
-                    #print('columns_taken: ' + str(state.col_indices)) 
-                    #print('feature_dic: ')
-                    #print(str(state.feature_dic))
-                    #print('z(the true observed reward from final terminal state): ' + str(state.z))
-                    #print('N(s,a) of each action: ' + str(counts))
-                    #print('final prob. dist. output by MCTS: ' + str(state.pi_as))
-                    #state_index += 1
+                    #print('FAILED RECOVERY: (y,x) ITER ' + str(num_samples_s) + ':' + '///////////////////////////////////////////////')
+                    #state_index = 0
+                    #print('The original signal x is: ' + str(x))
+                    #print('The observed signal y is: ' + str(y))
+                    #Print information about the failed recovery
+                    #for state in trainExamples:
+                        #compute the probability distribution output by MCTS
+                        #state_string = Alphazero.mcts.game.stringRepresentation(state)
+                        #counts = [Alphazero.mcts.Nsa[(state_string,a)] if (state_string,a) in Alphazero.mcts.Nsa else 0 for a in range(Alphazero.mcts.game.getActionSize(Alphazero.mcts.args))]
+                        #print('')
+                        #print('STATE ' + str(state_index) + ' statistics:' + '----------------------------------')
+                        #print('action_indices: ' + str(state.action_indices))
+                        #print('columns_taken: ' + str(state.col_indices)) 
+                        #print('feature_dic: ')
+                        #print(str(state.feature_dic))
+                        #print('z(the true observed reward from final terminal state): ' + str(state.z))
+                        #print('N(s,a) of each action: ' + str(counts))
+                        #print('final prob. dist. output by MCTS: ' + str(state.pi_as))
+                        #state_index += 1
                     #print('/////////////////////////////////////////////////////////////')
-            #END TESTING-----------------------------------------------------------------------------
-            num_samples_s += 1
+                #END TESTING-----------------------------------------------------------------------------
+                num_samples_s += 1
         
-    #For fixed s, compute the recovery accuracy    
-    alphazero_fixeds_recacc = counter_s/num_samples_s
-    #Update alphazero_accuracy vector
-    alphazero_accuracy[s] = alphazero_fixeds_recacc    
-    print('Alphazero accuracy with MCTS for sparsity ' + str(s) + ' is: ' + str(alphazero_accuracy[s]))
+        #For fixed s, compute the recovery accuracy and average time
+        alphazero_fixeds_recacc = counter_s/num_samples_s
+        alphazero_fixeds_timeavg =  counter_time_s/num_samples_s
+        
+        #Update alphazero_accuracy vector
+        alphazero_time[s] = alphazero_fixeds_timeavg
+        alphazero_accuracy[s] = alphazero_fixeds_recacc
+            
+        print('Alphazero accuracy with MCTS for sparsity ' + str(s) + ' is: ' + str(alphazero_accuracy[s]))
+        print('Alphazero average recovery time for signal for sparsity ' + str(s) + ' is: ' + str(alphazero_time[s]))
     
-print('')
-print('---------------------------------------------------')
-print('Recovery of Alphazero is: ' )
-print(str(alphazero_accuracy))
-print('----------------------------------------------------')
-print('')
+    print('')
+    print('---------------------------------------------------')
+    print('Recovery of Alphazero is: ' )
+    print(str(alphazero_accuracy))
+    print('Avg. Recovery Time of Alphazero is: ' )
+    print(str(alphazero_time))
+    print('----------------------------------------------------')
+    print('')
