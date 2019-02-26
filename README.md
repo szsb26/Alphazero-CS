@@ -1,4 +1,4 @@
-# RL-for-CS
+# Reinforcement Learning for Compressed Sensing
 
 # Introduction
 The code in this repository contains a single GPU implementation of Alphazero for solving the Classic Compressed Sensing Problem. Given a fixed(or unfixed) matrix A of size m by n, m<<n, , and an observed vector y = Ax, where x is an unknown k-sparse vector, Alphazero attempts to iteratively pick the k support locations of x. 
