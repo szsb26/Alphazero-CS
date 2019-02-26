@@ -7,7 +7,7 @@ The code in this repository contains a single GPU implementation of Alphazero fo
 
 "current_version/alphazero_compressedsensing_nonoise_hierarchical_v2" is the most recent code(which may contain bugs) which provides optimizations for GPU and CPU usage. The goal is to add functionality for parallel MCTS simulations and move linear algebra computations and Monte Carlo Tree Search over to the GPU. 
 # Examples of Trained Policy/Value Networks 
-Below, we include some examples of trained policy/value networks(with and without MCTS during inference/testing). The first plot is the recovery accuracy for the 7 by 15 matrix on 6000 signals (1000 signals per sparsity on the x-axis) using 3 algorithms:
+Below, we include some examples of trained policy/value networks(without MCTS during inference/testing) versus popular compressed sensing algorithms. The first plot is the recovery accuracy for the 7 by 15 matrix on 6000 signals (1000 signals per sparsity on the x-axis) using 3 algorithms:
 
 1)l1-minimization
 2)Orthogonal Matching Pursuit
