@@ -22,9 +22,9 @@ In each of these folders, the following crucial folders hold:
 # Examples of Trained Policy/Value Networks 
 Below, we include some examples of trained policy/value networks(without MCTS during inference/testing) versus popular compressed sensing algorithms. The first plot is the recovery accuracy for the 7 by 15 matrix on 6000 signals (1000 signals per sparsity on the x-axis) using 3 algorithms:
 
-1)l1-minimization
-2)Orthogonal Matching Pursuit
-3)Alphazero
+- l1-minimization
+- Orthogonal Matching Pursuit
+- Alphazero
 
 The second plot is the same as plot 1, except it is performed on the 15 by 50 matrix. Same as plot 1, 1000 signals per sparsity(for a total of 14,000 signals) are used for testing. 
 
