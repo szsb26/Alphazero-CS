@@ -32,7 +32,7 @@ The second plot is the same as plot 1, except it is performed on the 15 by 50 ma
 ![acc_plot_smallmatrices2](https://user-images.githubusercontent.com/16004926/53453266-76c74200-39d8-11e9-9e68-0015b434b824.png)
 
 # References
-The code here is specialized and engineered towards only solving the compressed sensing problem. For a generalized alphazero algorithm which is applicable to any type of problem, please refer to https://github.com/suragnair/alpha-zero-general.
+The code here is specialized and engineered towards solving the compressed sensing problem. For a generalized alphazero algorithm which is applicable to any type of problem, please refer to https://github.com/suragnair/alpha-zero-general.
 
 # Contact
 If there are any questions, please email me at sichen.zhong@stonybrook.edu
