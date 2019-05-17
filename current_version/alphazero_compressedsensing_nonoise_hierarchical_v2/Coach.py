@@ -66,14 +66,14 @@ class Coach():
             #Given the randomly generated action, move the root node to the next state.   
             
             #NEW_CODE_HIERARCHICAL-----------------------------------------
-            next_s = self.game.getNextState(state, action)
+            next_s = self.game.getNextState(state, action, self.game_args, 1)
             
             #if length of column indices is greater than maxTreeDepth, reassign next_s to the state in Rsa instead. Otherwise, keep next_s
             if len(next_s.col_indices) > self.args['maxTreeDepth']:
                 next_s = self.mcts.Rsa[(state_stringRep, action)] #These states are new and not the state objects created in MCTS search. We cant access those private variables, but we can access
             
             #for a in self.mcts.Rsa[(state_stringRep,action)]:
-                #next_s = self.game.getNextState(next_s,a)
+                #next_s = self.game.getNextState(next_s, a, self.game_args, 0)
             
             state = next_s #reassign state
             state_stringRep = self.game.stringRepresentation(state) #needed to access dictionary self.mcts.Es
@@ -137,7 +137,7 @@ class Coach():
             action = np.random.choice(len(actionProb), p = actionProb)
             
             #Get the next state
-            next_s = temp_MCTS.game.getNextState(temp_statesList[-1], action)
+            next_s = temp_MCTS.game.getNextState(temp_statesList[-1], action, temp_MCTS.game_args, 1)
             
             #if length of column indices is greater than maxTreeDepth, reassign next_s to the state in Rsa instead. Otherwise, keep next_s
             #if len(next_s.col_indices) > self.args['maxTreeDepth'] and next_s.action_indices[-1] == 0:
@@ -154,7 +154,7 @@ class Coach():
             r = temp_MCTS.Es[nexts_keyRep]
             
             if r != 0:
-                #If r is not zero, then nexts is terminal state, so we prepare all states in temp_statesList
+                #If r is not zero, then next_s is terminal state, so we prepare all states in temp_statesList
                 #to have feature_dic, r, defined so they are ready to be fed into Neural Network. 
                 #make sure every state in temp_statesList has feature_dic(feature inputs), r, and pi_as(labels) defined.
                 for state in temp_statesList:
@@ -163,11 +163,36 @@ class Coach():
                     #set the feature dic, x_S and Atres. 
                     state_key = self.game.keyRepresentation(state)
                     #Note that terminal states do not have their features_s dictionaries well defined since terminal states
-                    #do not have to be input into the NN!!
+                    #do not have to be input into the NN!! This is because a node
+                    #is checked to be terminal or not before inputtng into NN.
+                    # Hence, the else should only be executed for terminal nodes.
+                    
                     if state_key in temp_MCTS.features_s:
                         state.feature_dic = temp_MCTS.features_s[state_key]
                     else:
                         state.compute_x_S_and_res(self.args, temp_MCTS.game_args)
+                        
+                       
+                #FOR TESTING----------------------------------------------------------------
+                #print('')
+                #print('--------------------------------------------------')
+                #print('Completed Game: ', temp_MCTS.identifier )
+                #print('The generated sparse vector x for training is: ', temp_MCTS.game_args.sparse_vector)
+                #print('Printing statistics for new training states:')
+                #for state in temp_statesList:
+                #    print('')
+                #    print('state identifier:', state.identifier)
+                #    print('state action indices: ', state.action_indices)
+                #    print('state columns taken: ', state.col_indices)
+                #    print('state feature_dic: ', state.feature_dic)
+                #    print('state term reward: ', state.termreward)
+                #    print('state p_as label: ', state.pi_as)
+                #    print('state reward label: ', state.z)
+                #    print('')
+                #print('--------------------------------------------------')
+                #print('')
+                #END TESTING----------------------------------------------------------------
+                
                 trainExamples += temp_statesList
             
             #If r == 0, then we append temp_MCTS and temp_statesList into new_MCTS_States_list so search can continue
@@ -191,6 +216,9 @@ class Coach():
                 self.game_args.generateSensingMatrix(self.args['m'], self.args['n'], self.args['matrix_type'])
                 self.game_args.save_Matrix(self.args['fixed_matrix_filepath'])
         
+        #keep track of learning time
+        learning_start = time.time()
+        
         #start training iterations
         for i in range(1, self.args['numIters']+1):
             print('------ITER ' + str(i) + '------')
@@ -211,7 +239,6 @@ class Coach():
                     print('Generating Self-Play Batch ' + str(j) + ':')
                     
                     bar = Bar('Self Play', max = self.args['eps_per_batch'])
-                    end = time.time()
                     
                     #Initialize MCTS_States_list. Number of pairs in MCTS_States_list should equal eps_per_batch
                     for ep in range(self.args['eps_per_batch']):
@@ -228,20 +255,22 @@ class Coach():
                         #Append to MCTS_States_list
                         MCTS_States_list.append([temp_MCTS, [temp_init_state]])
                     
-                    #initialize some variables for bookkeeping
+                    #initialize some variables for bookkeeping bar in terminal
                     current_MCTSStateslist_size = len(MCTS_States_list)
                     completed_episodes = 0
                     total_completed_eps = 0
-                    #----------------------------------------------------------
                 
                     #Initialize Threading Class. Needed to call threaded_mcts below. 
                     threaded_mcts = Threading_MCTS(self.args, self.nnet, self.skip_nnet)
+                    #----------------------------------------------------------
                         
                     #While MCTS_States_list is nonempty, advance each episode in MCTS_States_list by one move.
                     #continue advancing by one move until MCTS_States_list is empty, meaning that all games are completed.
                     #When a game is completed, its corresponding pair should be removed from MCTS_States_list
                     
                     #----------------------------------------------------------
+                    self_play_batchstart = time.time()
+                    
                     while MCTS_States_list:
                         #advanceEpisodes returns new MCTS_States_list with all elements having advanced one move, and removes all completed games
                         #advanceEpisodes also returns a set of new trainExamples for games which have been completed after calling advanceEpisodes
@@ -265,6 +294,9 @@ class Coach():
                     #----------------------------------------------------------    
                     #end the tracking of the bookkeeping bar
                     bar.finish()
+                    self_play_batchend = time.time()
+                    print('All Self-Play Games in batch have been played to completion.')
+                    print('Total time taken for batch: ', self_play_batchend - self_play_batchstart)
                     
                     iterationTrainExamples += batchTrainExamples
                 
@@ -340,6 +372,11 @@ class Coach():
                       
                 self.nnet.save_checkpoint(folder = self.args['network_checkpoint'], filename='nnet_checkpoint' + str(i-1))
                 self.nnet.save_checkpoint(folder = self.args['network_checkpoint'], filename = 'best')
+        
+        #Compute total time to run alphazero
+        learning_end = time.time()
+        print('----------TRAINING COMPLETE----------')
+        print('Total training time: ', learning_end - learning_start)
             
     def getCheckpointFile(self, iteration): #return a string which gives information about current checkpoint iteration
     #and file type (.tar)

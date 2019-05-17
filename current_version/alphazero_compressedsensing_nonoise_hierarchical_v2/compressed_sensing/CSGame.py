@@ -14,32 +14,58 @@ class CSGame():
     #return number of all actions (equal to column size of A + 1)
         return args['n']+1 
 
-    def getNextState(self, state, action): 
+    def getNextState(self, state, action, Game_args, compute_inverse): 
     #input is a State object and an action(integer) which is less than column size of A + 1. 
     #Output is the next state as a CSState object with new self.action_indices and self.col_indices.
     #This method is only called in MCTS.py for when s is NOT A LEAF and NOT A TERMINAL STATE, since MCTS search stops when terminal node is met
         
-        
         #Construct new col_indices for next state. If action was stopping action, DO NOT add to col_indices
         
         if action != state.action_indices.size - 1: #Note that state.action_indices[state.action_indices.size - 1] is the stopping action
-            nextstate_col_indices = copy.deepcopy(state.col_indices)
+            #nextstate_col_indices = copy.deepcopy(state.col_indices)
+            nextstate_col_indices = state.col_indices[:] #makes a shallow copy of state.col_indices. Note that state.col_indices contains integers, which are immutable, so it is sufficient to use shallow copy here.
             nextstate_col_indices.append(action)
         else: #if stopping action was chosen as best action, then the column indices of next state is the same as current state
-            nextstate_col_indices = copy.deepcopy(state.col_indices)
+            #nextstate_col_indices = copy.deepcopy(state.col_indices)
+            nextstate_col_indices = state.col_indices[:]
         #Construct action_indices for next state
         nextstate_action_indices = np.array(state.action_indices)
         nextstate_action_indices[action] = 1
         #Construct the next state object
         next_state = State(nextstate_action_indices, nextstate_col_indices, state.identifier)
         
-        #FOR TESTING--------
-        #print('The Next State has the following action indices and currently held columns respectively:')
-        #print(next_state.action_indices)
-        #print(next_state.col_indices)
-        #print('')
-        #-------------------
+        #if compute_inverse == 1, compute the new (A^T * A)^-1 and save it in next_state.inverse
+        if compute_inverse == 1:
+            if action == state.action_indices.size - 1: #if stopping action is chosen, then the inverse and AT*b are the same as previous state.
+                next_state.inverse = state.inverse
+                next_state.ATy = state.ATy
+            elif len(next_state.col_indices) > 1: #use information from state to compute the inverse for next_state
+                #1)Compute the new inverse of next_state
+                #Get the old matrix and new columns respectively
+                A_prev = Game_args.sensing_matrix[:, state.col_indices]
+                new_c = Game_args.sensing_matrix[:,action]
         
+                u1 = np.matmul(A_prev.transpose(), new_c)
+                u1 = np.reshape(u1, (u1.shape[0], 1))
+                u2 = np.matmul(state.inverse, u1)
+                
+                d = 1/(np.matmul(new_c.transpose(), new_c) - np.matmul(np.matmul(u1.transpose(), state.inverse), u1))
+                u3 = d*u2
+                F11_inverse = state.inverse + d*np.outer(u2, u2)
+                
+                left = np.vstack((F11_inverse, -1*u3.transpose()))
+                right = np.vstack((-1*u3, d))
+                
+                next_state.inverse = np.hstack((left, right))
+                
+                #2)Compute A^T*b of next_state
+                bottom = np.matmul(new_c, Game_args.obs_vector) #should be just a float
+                next_state.ATy = np.vstack((state.ATy, bottom))
+            
+            else: #If there is only one column chosen, then we just go ahead and compute
+                A_S = Game_args.sensing_matrix[:, next_state.col_indices]
+                next_state.inverse = np.linalg.inv(np.matmul(A_S.transpose(), A_S)) #should just be a number here for 1 column case
+                next_state.ATy = np.matmul(A_S.transpose(), Game_args.obs_vector) #should just be a number here for 1 column case
         
         return next_state 
 

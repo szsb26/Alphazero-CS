@@ -5,7 +5,7 @@ from keras.models import Model, model_from_json
 from keras.optimizers import Adam
 
 from numpy.random import seed
-#seed(1)
+#seed(2)
 
 class NNetWrapper(): 
     def __init__(self, args): 
@@ -76,34 +76,26 @@ class NNetWrapper():
             return p_as, v
             
     def batch_predict(self, MCTS_States_list):
-    #INPUT: takes in a list of pairs of the form (MCTS_object, [States list]). 
+    #INPUT: MCTS_States_list, which is a list where each element is the form (MCTS_object, [States list]). 
     #In each MCTS_object, we use the features MCTS_object.features_s[MCTS_object.batchquery_key] and call
     #the NN only once to get our batch predictions. Note that we do not do any operations on [States list]
     #OUTPUT: two matrices (p_as, v)
-        
-        #FOR TESTING-----------------------
-        #print('')
-        #print('-----------------ENTERING NNet.batch_predict-------------------')
-        #END TESTING-----------------------
         
         #Initialize 2 np zero vectors with same size as feature x_l2 and col_res_IP. Final input to NN should be a list of size two of the form
         #[x_l2_features, lambda_features], where both features are of size (k, column size). 
         x_l2_temp = []
         lambda_temp = []
-        
-        #FOR TESTING-----------------------
-        #for pair in MCTS_States_list:
-            #MCTS_object = pair[0]
-            #print('last state in search path of MCTS object ' + str(MCTS_object.identifier) + ' is ' + str(MCTS_object.search_path[-1].action_indices))
-            #print('The terminal reward of the last state is: ', MCTS_object.Es[MCTS_object.search_path[-1].keyRep])
-        #END TESTING-----------------------
+
         
         #Construct numpy matrices for prediction
         #Note that we should skip (MCTS_object, States_list) pairs where traversetoLeaf landed on a terminal node.
+        #This is because the terminal node was already input into the network.
         for pair in MCTS_States_list:
             MCTS_object = pair[0]
-            if MCTS_object.Es[MCTS_object.search_path[-1].keyRep] == 0:
+            last_state = MCTS_object.search_path[-1]
+            if MCTS_object.Es[last_state.keyRep] == 0:
                 #FOR TESTING-------------------
+                #print('')
                 #print('Node we wish to predict on for MCTS_object: ', MCTS_object.identifier)
                 #print('Predicting on Node:', MCTS_object.search_path[-1].action_indices)
                 #print('Node Key:', MCTS_object.search_path[-1].keyRep)
@@ -112,12 +104,13 @@ class NNetWrapper():
                 #print(MCTS_object.features_s[MCTS_object.search_path[-1].keyRep]['x_l2'])
                 #print(MCTS_object.features_s[MCTS_object.search_path[-1].keyRep]['col_res_IP'])
                 #print('yep, theyre valid calls')
+                #print('')
                 #END TESTING-------------------
             
                 #MCTS_object.search_path[-1] is a state object. Namely it is the leaf in the search path.
             
-                x_l2_feature = MCTS_object.features_s[MCTS_object.search_path[-1].keyRep]['x_l2'] #a numpy array of dim (1, col. size of A)
-                lambda_feature = MCTS_object.features_s[MCTS_object.search_path[-1].keyRep]['col_res_IP'] #a numpy array of dim (1, col. size of A)
+                x_l2_feature = MCTS_object.features_s[last_state.keyRep]['x_l2'] #a numpy array of dim (1, col. size of A)
+                lambda_feature = MCTS_object.features_s[last_state.keyRep]['col_res_IP'] #a numpy array of dim (1, col. size of A)
                 
                 #append features of MCTS_object into a list for batch prediction
                 x_l2_temp.append(x_l2_feature)
@@ -129,8 +122,10 @@ class NNetWrapper():
         #print('lambda_temp length: ', len(lambda_temp))
         #END TESTING--------------------
         
-        #Check if x_l2_temp and lambda_temp are empty lists or not. If they are empty lists, then it means that in each search on every MCTS_object, 
-        #we arrived at a terminal node. In that case, immediately return from batch_predict function
+        #Check the corner case of whether x_l2_temp and lambda_temp are empty lists or not. 
+        #Both are of the same size. If they are empty lists, then it means that in each search 
+        #on every MCTS_object, we arrived at a terminal node. In that case, immediately return 
+        #from batch_predict function
         if len(x_l2_temp) == 0:
             return None, None
         
@@ -144,7 +139,7 @@ class NNetWrapper():
         #END TESTING--------------------
         
         #dimension of both x_l2_temp and lambda_temp are currently of the form (k, 1, col. size of A), where k equals the number of elements in MCTS_States_list.
-        #If k = 1, then shape of x_l2_temp and lambda_temp each is actually (1, col. size of A). Hence, only squeeze if length of shape is greater than 2.
+        #If k = 1, then shape of x_l2_temp and lambda_temp each is already (1, col. size of A). Hence, only squeeze if length of shape is greater than 2.
         #Below command squeezes both x_l2_temp and lambda_temp to shape (k, col. size of A).
         if len(x_l2_temp.shape) > 2:
             x_l2_temp = x_l2_temp.squeeze()

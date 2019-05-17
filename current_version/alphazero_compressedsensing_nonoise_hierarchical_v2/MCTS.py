@@ -23,7 +23,7 @@ class MCTS():
         self.Ns = {}        # stores #times board s was visited, which is equivalent to sum_b(self.Nsa[(s,b)])
         self.Ps = {}        # stores initial policy (returned by neural net). In our problem, the policy is a vector whose size is equal to #columns of A + 1 (+1 for the stopping action). 
 
-        self.Es = {}        # stores game.getGameEnded ended for board s. IOW, stores all states and their terminal rewards. 0 if state not terminal, and nonzero reward if state is terminal.
+        self.Es = {}        # stores game.getGameEnded ended for board s. IOW, for each state, stores their terminal reward. 0 if state not terminal, and nonzero reward if state is terminal.
         self.Vs = {}        # stores game.getValidMoves for board s
         self.Rsa = {}       #given state s, and a chosen action a, store the terminal node which is gotten by taking action a at state s and then using bootstrap or OMP to take remaining columns. 
         self.features_s = {} #stores the computed feature values so we do not have to recompute the features again for a given state/node. 
@@ -116,11 +116,6 @@ class MCTS():
             
             self.features_s[s] = canonicalBoard.feature_dic
             
-            #Search needs to stop here and wait until other search jobs have also
-            #computed the leaf features. return the features_s[s] for batch prediction!!!!! It 
-            
-            
-            
             
             self.Ps[s], v = self.nnet.predict(canonicalBoard) #neural network takes in position s and returns a prediction(which is p_theta vector and v_theta (numpy vector). Look at own notes)
             valids = self.game.getValidMoves(canonicalBoard) #returns a numpy vector of 0 and 1's which indicate valid moves from the set of all actions
@@ -180,7 +175,7 @@ class MCTS():
         a = best_act 
         
         #SKIPPING COLUMNS AFTER TREE REACHES CERTAIN DEPTH--------  
-        next_s = self.game.getNextState(canonicalBoard, a)
+        next_s = self.game.getNextState(canonicalBoard, a, self.game_args, 1)
         
         if len(next_s.col_indices) > self.args['maxTreeDepth'] and next_s.action_indices[-1] == 0: #'maxTreeDepth' should be less than game_args.game_iter. If depth set to zero, we only have the root node and the next level are all terminal nodes picked by the bootstrap net. maxTreeDepth = 0 should be equivalent to numMCTSskips > m
             if (s,a) not in self.Rsa:
@@ -212,12 +207,12 @@ class MCTS():
                     
                     action = np.argmax(valid_pas)
                     
-                    next_s = self.game.getNextState(next_s, action)
+                    next_s = self.game.getNextState(next_s, action, self.game_args, 1)
                 self.Rsa[(s,a)] = next_s
             else:
                 next_s = self.Rsa[(s,a)]
                 #for action in self.Rsa[(s,a)]:
-                    #next_s = self.game.getNextState(next_s,action)
+                    #next_s = self.game.getNextState(next_s,action, self.game_args, 1)
         #END------------------------------------------------------
         
         v = self.search(next_s) #traverse from root to a leaf or terminal node using recursive search. 

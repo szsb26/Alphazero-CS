@@ -32,9 +32,9 @@ args = {
     'fixed_matrix_filepath': os.getcwd() + '/fixed_sensing_matrix', #If args['fixed_matrix'] above is set to True, then this parameter determines where the fixed sensing matrix is saved or where the existing matrix is loaded from. 
     #---------------------------------------------------------------
     #General Alphazero Training Parameters
-    'num_batches': 1, #determines how many batches of (y,x) pairs we wish to generate. 
-    'eps_per_batch': 400, #number of MCTS objects/(y,x) pairs we want to maintain at once for parallel search. Note that each MCTS tree is saved in memory, so this option should not exceed total memory.
-    'numIters': 100, #number of alphazero iterations performed. Each iteration consists of 1)playing numEps self play games, 2) retraining neural network
+    'num_batches': 4, #determines how many batches of (y,x) pairs we wish to generate. 
+    'eps_per_batch': 100, #number of MCTS objects/(y,x) pairs we want to maintain at once for parallel search. Note that each MCTS tree is saved in memory, so this option should not exceed total memory.
+    'numIters': 1, #number of alphazero iterations performed. Each iteration consists of 1)playing numEps self play games, 2) retraining neural network
     #'numEps': 400, #dictates how many self play games are played each iteration of the algorithm
     'maxlenOfQueue':10000, #dictates total number of game states saved(not games). 
     'numItersForTrainExamplesHistory': 1, #controls the size of trainExamplesHistory, which is a list of different iterationTrainExamples deques. 
@@ -50,7 +50,7 @@ args = {
     'lr': 0.001,    #learning rate of NN, relevant for NetArch(), NetArch1()
     'num_layers': 2,    #number of hidden layers after the 1st hidden layer, only relevant for NetArch()
     'neurons_per_layer':200,    #number of neurons per hidden layer
-    'epochs': 10,   #number of training epochs. If There are K self play states, then epochs is roughly K/batch_size. Note further that K <= numEps*sparsity. epochs determines the number of times weights are updated.
+    'epochs': 20,   #number of training epochs. If There are K self play states, then epochs is roughly K/batch_size. Note further that K <= numEps*sparsity. epochs determines the number of times weights are updated.
     'batch_size': 400, #dictates the batch_size when training 
     'num_features' : 2, #number of self-designed features used in the input
     'load_nn_model' : False, #If set to True, load the best network (best_model.json and best_weights.h5)
@@ -68,7 +68,7 @@ args = {
             'skip_nnet_filename': 'skip_nnet', 
     'beta': 1, #Recall the augmented probability aug_prob = beta * probs + (1-beta) * 1/(len(x)) * x_I, where x_I is the indicator vector of ones of the true sparse solution x. Hence, higher beta values increase the probabilities towards choosing the correct column choices. 
                  #SET beta = 1 DURING TESTING SINCE x SHOULD BE UNKNOWN DURING TESTING. 
-    'tempThreshold': 7,    #dictates when the MCTS starts returning deterministic polices (vector of 0 and 1's). See Coach.py for more details.
+    'tempThreshold': 25,    #dictates when the MCTS starts returning deterministic polices (vector of 0 and 1's). See Coach.py for more details.
     'gamma': 1, #note that reward for a terminal state is -alpha||x||_0 - gamma*||A_S*x-y||_2^2. The smaller gamma is, the more likely algorithm is going to choose stopping action earlier(when ||x||_0 is small). gamma enforces how much we want to enforce Ax is close to y. 
                 #choice of gamma is heavily dependent on the distribution of our signal and the distribution of entries of A. gamma should be apx. bigger than m/||A_Sx^* - y||_2^2, where y = Ax, and x^* is the solution to the l2 regression problem.
     'alpha':1e-5,  #note that reward for a terminal state is -alpha||x||_0 - gamma*||A_S*x-y||_2^2. The smaller alpha is, the more weight the algorithm gives in selecting a sparse solution.

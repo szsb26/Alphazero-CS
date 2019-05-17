@@ -48,17 +48,15 @@ class Game_args(): #We save the args in Game_args class here because later on we
         #If self.sensing_matrix has not already been set, then this comparison throws an error. 
             
         x = np.zeros(self.sensing_matrix.shape[1])
-        #rand_sparsity = np.random.randint(1,sparsity)
-        
         rand_sparsity = np.random.randint(1,sparsity)
-        
         self.game_iter = rand_sparsity
+        
         if entry_type == 'sdnormal':
             x[0:rand_sparsity] = np.random.normal(0, 1, rand_sparsity)
         if entry_type == 'uniform01':
-            x[0:rand_sparsity] = np.random.uniform(0,1,rand_sparsity)
+            x[0:rand_sparsity] = np.random.uniform(0, 1, rand_sparsity)
         if entry_type == 'uniform':
-            x[0:rand_sparsity] = np.random.uniform(-1,1,rand_sparsity)
+            x[0:rand_sparsity] = np.random.uniform(-1, 1, rand_sparsity)
             
         np.random.shuffle(x)
         self.sparse_vector = x
