@@ -3,12 +3,6 @@ from keras.layers import Input, Dense, concatenate
 from keras.optimizers import Adam
 from keras import regularizers
 from keras import backend
-from numpy.random import seed
-
-#if seed is set to 1 below, then all libraries which import CS_NNet which use random number generators will always generate the same number 
-#even over different executions of the program
-#seed(1)
-
 
 class NetArch():
     def __init__(self, args):

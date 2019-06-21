@@ -1,11 +1,6 @@
 import sys, os
 import cProfile
 
-#FOR TESTING---------------------------
-#import numpy as np
-#np.set_printoptions(threshold=np.nan)
-#END TESTING---------------------------
-
 #add arguments of algorithm into system path so that we can import them
 sys.path.insert(0, os.getcwd())
 from Coach import Coach
@@ -17,6 +12,9 @@ from Game_Args import Game_args
 sys.path.insert(0, os.getcwd() + '/compressed_sensing/keras_tf')
 from NNet import NNetWrapper
 
+#For Testing and debugging, enable seed to fix all random generations
+from numpy.random import seed
+seed(1)
 
 
 #args dictionary which dictates behavior of NN, and MCTS, and Alphazero.
@@ -34,8 +32,7 @@ args = {
     #General Alphazero Training Parameters
     'num_batches': 4, #determines how many batches of (y,x) pairs we wish to generate. 
     'eps_per_batch': 100, #number of MCTS objects/(y,x) pairs we want to maintain at once for parallel search. Note that each MCTS tree is saved in memory, so this option should not exceed total memory.
-    'numIters': 1, #number of alphazero iterations performed. Each iteration consists of 1)playing numEps self play games, 2) retraining neural network
-    #'numEps': 400, #dictates how many self play games are played each iteration of the algorithm
+    'numIters': 30, #number of alphazero iterations performed. Each iteration consists of 1)playing numEps self play games, 2) retraining neural network
     'maxlenOfQueue':10000, #dictates total number of game states saved(not games). 
     'numItersForTrainExamplesHistory': 1, #controls the size of trainExamplesHistory, which is a list of different iterationTrainExamples deques. 
     'checkpoint': os.getcwd() + '/training_data', #filepath for SAVING newly generated self play training data
@@ -45,11 +42,12 @@ args = {
     'Arena': False, #determines whether model selection/arena is activated or not. Below options will not be run if this is set to False.
         'arenaCompare': 100, #number of games played in the arena to compare 2 networks pmcts and nmcts
         'updateThreshold': 0.55, #determines the percentage of games nmcts must win for us to update pmcts to nmcts
+    'verbose': True, #determines whether comments are enabled or not. 
     #---------------------------------------------------------------
     #NN Parameters
     'lr': 0.001,    #learning rate of NN, relevant for NetArch(), NetArch1()
     'num_layers': 2,    #number of hidden layers after the 1st hidden layer, only relevant for NetArch()
-    'neurons_per_layer':200,    #number of neurons per hidden layer
+    'neurons_per_layer': 200,    #number of neurons per hidden layer
     'epochs': 20,   #number of training epochs. If There are K self play states, then epochs is roughly K/batch_size. Note further that K <= numEps*sparsity. epochs determines the number of times weights are updated.
     'batch_size': 400, #dictates the batch_size when training 
     'num_features' : 2, #number of self-designed features used in the input
@@ -62,16 +60,12 @@ args = {
     #MCTS parameters
     'cpuct': 2, #controls the amount of exploration at each depth of MCTS tree.
     'numMCTSSims': 500, #For each move, numMCTSSims is equal to the number of MCTS simulations in finding the next move during self play. Smallest value of numMCTSsims is 2.    
-    'maxTreeDepth': 30, #sets the max tree depth of MCTS search. Once max tree depth is reached, and if sparsity > maxTreeDepth, then bootstrapped network(skip_rule) is used to pick remainder of the columns.Note that this means that maxTreeDepth does not count the root or terminal nodes as levels in the tree. This means real tree depth must add 2.
-    'skip_rule': None, #Current options: None(defaults to current policy/value network), OMP(uses OMP rule to pick next column), bootstrap(uses boostrapped network in bootstrap folder) 
-            'skip_nnet_folder': os.getcwd() + '/skip_network', 
-            'skip_nnet_filename': 'skip_nnet', 
     'beta': 1, #Recall the augmented probability aug_prob = beta * probs + (1-beta) * 1/(len(x)) * x_I, where x_I is the indicator vector of ones of the true sparse solution x. Hence, higher beta values increase the probabilities towards choosing the correct column choices. 
                  #SET beta = 1 DURING TESTING SINCE x SHOULD BE UNKNOWN DURING TESTING. 
-    'tempThreshold': 25,    #dictates when the MCTS starts returning deterministic polices (vector of 0 and 1's). See Coach.py for more details.
+    'tempThreshold': 10,    #dictates when the MCTS starts returning deterministic polices (vector of 0 and 1's). See Coach.py for more details.
+    'alpha': 1e-5,  #note that reward for a terminal state is -alpha||x||_0 - gamma*||A_S*x-y||_2^2. The smaller alpha is, the more weight the algorithm gives in selecting a sparse solution.
     'gamma': 1, #note that reward for a terminal state is -alpha||x||_0 - gamma*||A_S*x-y||_2^2. The smaller gamma is, the more likely algorithm is going to choose stopping action earlier(when ||x||_0 is small). gamma enforces how much we want to enforce Ax is close to y. 
                 #choice of gamma is heavily dependent on the distribution of our signal and the distribution of entries of A. gamma should be apx. bigger than m/||A_Sx^* - y||_2^2, where y = Ax, and x^* is the solution to the l2 regression problem.
-    'alpha':1e-5,  #note that reward for a terminal state is -alpha||x||_0 - gamma*||A_S*x-y||_2^2. The smaller alpha is, the more weight the algorithm gives in selecting a sparse solution.
     'epsilon': 1e-5, #If x is the optimal solution to l2, and the residual of l2 regression ||A_Sx-y||_2^2 is less than epsilon, then the state corresponding to indices S is a terminal state in MCTS. 
 }
 
@@ -86,17 +80,10 @@ if args['load_nn_model'] == True:
     filename = 'best'
     nnet.load_checkpoint(args['network_checkpoint'], filename)
     
-if args['skip_rule'] == 'bootstrap':
-    skip_nnet = NNetWrapper(args)
-    skip_nnet.load_checkpoint(args['skip_nnet_folder'], args['skip_nnet_filename'])
-    
-elif args['skip_rule'] == None:
-    skip_nnet = nnet
-    
 else:
     skip_nnet = None
 
-Alphazero_train = Coach(Game, nnet, args, Game_args, skip_nnet)
+Alphazero_train = Coach(Game, nnet, args, Game_args)
 
 #FOR TESTING-----------------------------------------------------
 #weights = Alphazero_train.nnet.nnet.model.get_weights()

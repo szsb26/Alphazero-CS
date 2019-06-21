@@ -4,8 +4,6 @@ import pickle
 from keras.models import Model, model_from_json
 from keras.optimizers import Adam
 
-from numpy.random import seed
-#seed(2)
 
 class NNetWrapper(): 
     def __init__(self, args): 
@@ -90,8 +88,7 @@ class NNetWrapper():
         #Construct numpy matrices for prediction
         #Note that we should skip (MCTS_object, States_list) pairs where traversetoLeaf landed on a terminal node.
         #This is because the terminal node was already input into the network.
-        for pair in MCTS_States_list:
-            MCTS_object = pair[0]
+        for MCTS_object, States_list in MCTS_States_list:
             last_state = MCTS_object.search_path[-1]
             if MCTS_object.Es[last_state.keyRep] == 0:
                 #FOR TESTING-------------------
@@ -138,7 +135,7 @@ class NNetWrapper():
         #print('lambda_temp shape: ', lambda_temp.shape)
         #END TESTING--------------------
         
-        #dimension of both x_l2_temp and lambda_temp are currently of the form (k, 1, col. size of A), where k equals the number of elements in MCTS_States_list.
+        #x_l2_temp.shape and lambda_temp.shape are tuples in the form of (k, 1, col. size of A), where k equals the number of elements in MCTS_States_list.
         #If k = 1, then shape of x_l2_temp and lambda_temp each is already (1, col. size of A). Hence, only squeeze if length of shape is greater than 2.
         #Below command squeezes both x_l2_temp and lambda_temp to shape (k, col. size of A).
         if len(x_l2_temp.shape) > 2:

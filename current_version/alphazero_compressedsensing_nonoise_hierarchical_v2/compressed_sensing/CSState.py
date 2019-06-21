@@ -18,7 +18,9 @@ class State():
         #compute terminal reward, 0 if not a terminal state.
         self.termreward = None
         #labels(if there are any)
-        self.pi_as = np.zeros(actions_indicator.size)
+        pi_as_label = np.zeros(actions_indicator.size)
+        pi_as_label[-1] = 1
+        self.pi_as = pi_as_label
         self.z = None #The computed label for state
         #NN_input format for prediction(dont need labels for states we wish to predict)
         self.nn_input = None
@@ -37,13 +39,13 @@ class State():
         if self.col_indices: #If self.col_indices is not an empty list(meaning that we are not at the start state in which we have not chosen any columns)
             #FEATURE 1:
             if args['x_l2'] == True:
-                x = np.matmul(self.inverse, self.ATy)
-                x = x.flatten() #flatten x shape from [|S|, 1) to (|S|,) for computations below
+                x_S = np.matmul(self.inverse, self.ATy)
+                x_S = x_S.flatten() #flatten x_S shape from [|S|, 1) to (|S|,) for computations below
 
                 opt_sol_l2 = np.zeros(args['n'])
                 i = 0
                 for k in self.col_indices:
-                    opt_sol_l2[k] = x[i]
+                    opt_sol_l2[k] = x_S[i]
                     i += 1
             
                 self.feature_dic['x_l2']=opt_sol_l2
@@ -51,7 +53,7 @@ class State():
                 
             #FEATURE 2:
             if args['lambda'] == True: 
-                residual = Game_args.obs_vector - np.matmul(Game_args.sensing_matrix[:, self.col_indices], x)
+                residual = Game_args.obs_vector - np.matmul(Game_args.sensing_matrix[:, self.col_indices], x_S)
                 
                 col_res_IP = np.matmul(Game_args.sensing_matrix.transpose(), residual)
                 self.feature_dic['col_res_IP'] = col_res_IP
@@ -72,13 +74,18 @@ class State():
         if self.col_indices: #If self.col_indices is not an empty list
             S = self.col_indices #note that when we compute the termreward for initial state, THIS WILL RETURN AN ERROR because col_indices of initial state is []   
             A_S = Game_args.sensing_matrix[:,S]
-            x = np.matmul(self.inverse, self.ATy)
-            residual = Game_args.obs_vector - np.matmul(A_S, x)
+            x_S = np.matmul(self.inverse, self.ATy)
+            #Note that product.shape = (7, 1)
+            product = np.matmul(A_S, x_S)
+            product = product.flatten()
+            #Note that product.shape = (7, ) and Game_args.obs_vector.shape = (7, )
+            residual = Game_args.obs_vector - product
             res_norm_squared = np.linalg.norm(residual)**2
             
             #if terminal state, compute the reward.
             if len(self.col_indices) == Game_args.game_iter or self.action_indices[-1] == 1 or res_norm_squared < args['epsilon']: #Game_args.game_iter is set every time we call Game_args.generateNewObsVec
                 self.termreward = - args['alpha']*len(self.col_indices) - args['gamma']*res_norm_squared
+               
             #ow, reward is 0 if state is not a terminal state
             else:
                 self.termreward = 0 #not terminal state

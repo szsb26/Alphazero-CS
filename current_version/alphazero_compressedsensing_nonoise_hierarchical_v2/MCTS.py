@@ -1,6 +1,5 @@
 import math
 import numpy as np
-#np.set_printoptions(threshold=np.nan) #allows correct conversion from numpy array to string. Otherwise string is truncated with '...'
 import time
 
 EPS = 1e-8
@@ -10,7 +9,7 @@ class MCTS():
     This class handles the MCTS tree. Note that for each game, a single tree is built. We do not construct new trees for each state/move during a single game.
     """
 
-    def __init__(self, game, nnet, args, Game_args, skip_nnet = None, identifier = None):
+    def __init__(self, game, nnet, args, Game_args, identifier = None):
         self.game = game    #MCTS stores a a single game(as game object). Look at Game.py. 
                             #The game object stores essential information like valid moves, get next state(which is another game object, etc...
         
@@ -25,14 +24,12 @@ class MCTS():
 
         self.Es = {}        # stores game.getGameEnded ended for board s. IOW, for each state, stores their terminal reward. 0 if state not terminal, and nonzero reward if state is terminal.
         self.Vs = {}        # stores game.getValidMoves for board s
-        self.Rsa = {}       #given state s, and a chosen action a, store the terminal node which is gotten by taking action a at state s and then using bootstrap or OMP to take remaining columns. 
+        #self.Rsa = {}       #given state s, and a chosen action a, store the terminal node which is gotten by taking action a at state s and then using bootstrap or OMP to take remaining columns. 
         self.features_s = {} #stores the computed feature values so we do not have to recompute the features again for a given state/node. 
         
         self.search_path = [] #stores a list of nodes which represents the latest search path in a single MCTS simulation. In the form of [(s_0, a_0), (s_1, a_1), (s_2, a_2), ..., s_n], where s_n is the leaf node. s_i's are State objects, and a_i is a positive integer. 
         self.batchquery_prediction = None #temporarily stores Ps[s] and v as (Ps[s], v) for a leaf node from a batch query prediction from the NN
-        
-        self.skip_nnet = skip_nnet   #stores reference to the network model which forcefully picks columns
-        
+    
         
     def getActionProb(self, canonicalBoard, temp=1): #temp = 1, the default option, has getActionProb return a probability distribution. The next action is chosen at random from this distribution. 
         """
@@ -172,54 +169,14 @@ class MCTS():
                     cur_best = u
                     best_act = a
 
-        a = best_act 
-        
-        #SKIPPING COLUMNS AFTER TREE REACHES CERTAIN DEPTH--------  
-        next_s = self.game.getNextState(canonicalBoard, a, self.game_args, 1)
-        
-        if len(next_s.col_indices) > self.args['maxTreeDepth'] and next_s.action_indices[-1] == 0: #'maxTreeDepth' should be less than game_args.game_iter. If depth set to zero, we only have the root node and the next level are all terminal nodes picked by the bootstrap net. maxTreeDepth = 0 should be equivalent to numMCTSskips > m
-            if (s,a) not in self.Rsa:
-                #self.Rsa[(s,a)] = []
-                while len(next_s.col_indices) < self.game_args.game_iter:
-                    next_s.compute_x_S_and_res(self.args, self.game_args)
-                    next_s.converttoNNInput()
-                    
-                    if self.args['skip_rule'] == 'bootstrap' or self.args['skip_rule'] == None:
-                        p_as, reward = self.skip_nnet.predict(next_s)
-                    
-                    elif self.args['skip_rule'] == 'OMP':
-                        p_as = np.zeros(self.args['n'] + 1)
-                        AT_res = next_s.feature_dic['col_res_IP']
-                        AT_res = abs(AT_res)
-                        next_col = np.argmax(AT_res)
-                        p_as[next_col] = 1
-                    
-                    valids_nexts = self.game.getValidMoves(next_s)
-                    valid_pas = p_as*valids_nexts
-                    sum_pas = np.sum(valid_pas)
-                    if sum_pas > 0:
-                        valid_pas /= sum_pas
-                    else:
-                        print("All valid moves were masked, do workaround.")
-                        
-                        valid_pas = valid_pas + valids
-                        valid_pas /= np.sum(valid_pas)
-                    
-                    action = np.argmax(valid_pas)
-                    
-                    next_s = self.game.getNextState(next_s, action, self.game_args, 1)
-                self.Rsa[(s,a)] = next_s
-            else:
-                next_s = self.Rsa[(s,a)]
-                #for action in self.Rsa[(s,a)]:
-                    #next_s = self.game.getNextState(next_s,action, self.game_args, 1)
-        #END------------------------------------------------------
+        a = best_act
         
         v = self.search(next_s) #traverse from root to a leaf or terminal node using recursive search. 
         #-------------------------------------------------------------------------------------
+        #This step is the backtracking step
         #because we recursively search in the lines above, the below snippet updates self.Qsa and self.Nsa of all visited nodes from the bottom to the root.
         #Because we reach a leaf sooner or later, the middle section is executed and v below is well defined!
-        #formulas below match what we have in notebook.
+        
         if (s,a) in self.Qsa:
             self.Qsa[(s,a)] = (self.Nsa[(s,a)]*self.Qsa[(s,a)] + v)/(self.Nsa[(s,a)]+1) #The v in this equation could be the true terminal reward OR the predicted reward from NN, depending on whether the search ended on a leaf which is also a terminal node. 
             self.Nsa[(s,a)] += 1

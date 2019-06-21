@@ -111,4 +111,3 @@ class CSGame():
         state.keyRep = state_dictkey
         
         return state_dictkey
-        #return np.array_str(state.action_indices) 

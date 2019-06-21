@@ -10,15 +10,14 @@ EPS = 1e-8
 #This class handles doing a single search among every (MCTS_object, States_list) pair in the list MCTS_States_list
 class Threading_MCTS():
     
-    def __init__(self, args, nnet, skip_nnet = None):
+    def __init__(self, args, nnet):
         self.nnet = nnet #needed for prediction
-        self.skip_nnet = skip_nnet
         self.args = args
         
         #exit_flag is an event object which will control when the threaded_search function STOPS.
         #When each threaded_search stops, we access the MCTS_object for the appropriate neural network inputs
         
-    def getActionProbs (self, MCTS_States_list, temp=1):
+    def getActionProbs (self, MCTS_States_list):
     # calls parallel_search numMCTS times and outputs prob. dist. for each (MCTS object, [States list]) pair in MCTSandStates  
         
         #parallel search numMCTSsims times
@@ -30,45 +29,45 @@ class Threading_MCTS():
             #END TESTING---------------------------
             self.parallel_search(MCTS_States_list)
         
-        #Once numMCTSsims parallel_searches have been done, all weights in each MCTS_obj have been updated, so we retrieve the probabilities
+        #Once numMCTSsims parallel_searches have been done, all edge weights in each MCTS_obj have been updated, so we retrieve the probabilities
         #given by N(s,a). Put these new probabilities into a list.
         
         actionProbs = []
         
-        for pair in MCTS_States_list:
-            MCTS_obj = pair[0]
-            State_list = pair[1]
+        for MCTS_object, State_list in MCTS_States_list:
             
-            s = MCTS_obj.game.keyRepresentation(State_list[-1])
+            s = MCTS_object.game.keyRepresentation(State_list[-1])
             
-            temp_counts = [MCTS_obj.Nsa[(s,a)] if (s,a) in MCTS_obj.Nsa else 0 for a in range(MCTS_obj.game.getActionSize(self.args))]
-            
-            if temp==0:
-                bestA = np.argmax(temp_counts)
-                probs = [0] * len(temp_counts)
-                probs[bestA] = 1
-                actionProbs.append(probs)
-            
-            else:
-                temp_counts = [x**(1./temp) for x in temp_counts]
-                probs = [x/float(sum(temp_counts)) for x in temp_counts]
-                actionProbs.append(probs)
+            temp_counts = [MCTS_object.Nsa[(s,a)] if (s,a) in MCTS_object.Nsa else 0 for a in range(MCTS_object.game.getActionSize(self.args))]
+            total_sum = float(sum(temp_counts))
+            probs = [x/total_sum for x in temp_counts]
+            actionProbs.append(probs)
                 
         return actionProbs 
         
     def parallel_search (self, MCTS_States_list):
-    #1)parallel search conducts one search across all MCTS objects and updates the weights of each MCTS object
-    #2)Each pair in MCTS_States_list is in the form (MCTS object, [State Objects])
-    #3)We use threaded_search above on each MCTS object
+    #1)For each MCTS_object in MCTS_States_list, traverse down from the current root to a leaf
+    #2)For each MCTS_object, States_list in MCTS_States_list, update the leaf
+    #3)For each MCTS_object, update the edges which were traversed in step 1. 
+    
+        #FOR TESTING-----------------
+        #print('------------------------------------------------------------')
+        #print('BEGINNING SINGLE PARALLEL_SEARCH.....')
+        #print('')
+        #END TESTING-----------------
         
         #Conduct a search on every (MCTS_object, States_list) pair
-        for pair in MCTS_States_list:
         
-            MCTS_object = pair[0]
-            States_list = pair[1]
+        #FOR TESTING------------------
+        #print('')
+        #print('BEGINNING TRAVERSING DOWN TO LEAF FOR EACH MCTS_object, States_list pair...')
+        #END TESTING------------------
+        
+        for MCTS_object, States_list in MCTS_States_list:
+        
             current_root = States_list[-1]
             
-            #reinitialize search_path to be empty. 
+            #reinitialize search_path to be empty(since this is a new search from root to leaf)
             MCTS_object.search_path = []
             
             #start recursive search to leaf. After traversetoLeaf is called, the search path traveled
@@ -79,6 +78,14 @@ class Threading_MCTS():
         #compiling each MCTS_object.search_path[-1] into a single query.
         
         pas_matrix, v_matrix = self.nnet.batch_predict(MCTS_States_list)
+        
+        #FOR TESTING-------------------------
+        #print('')
+        #print('The batch prediction returned the following:')
+        #print("pas_matrix: ", pas_matrix)
+        #print("v_matrix: ", v_matrix)
+        #print('')
+        #END TESTING--------------------------
             
         #Save the batch predictions into each MCTS_object and continue with MCTS search by updating the leaf node
         #of each MCTS_object. pas_matrix and v_matrix saves the predictions from searches which end
@@ -87,66 +94,21 @@ class Threading_MCTS():
         
         i = 0
 
-        for pair in MCTS_States_list:
-            MCTS_object = pair[0]
+        for MCTS_object, States_list in MCTS_States_list:
             last_state = MCTS_object.search_path[-1]
 
             if MCTS_object.Es[last_state.keyRep] == 0:
                 MCTS_object.batchquery_prediction = [pas_matrix[i,:], v_matrix[i]]
-            
-                #TESTING-------------------------
-                #search_path = []
-                #for j in range(len(MCTS_object.search_path)-1):
-                #    state = MCTS_object.search_path[j][0].col_indices
-                #    action = MCTS_object.search_path[j][1]
-                #    search_path.append((state,action))
-                #search_path.append(MCTS_object.search_path[-1].col_indices)
-                #print('')
-                #print('MCTS_object identifier where search ended on LEAF node: ', MCTS_object.identifier)
-                #print('generated sparsity for this MCTS object is: ', MCTS_object.game_args.game_iter)
-                #print('original sparse vector x is: ', MCTS_object.game_args.sparse_vector)
-                #print('MCTS_obj ' + str(MCTS_object.identifier) + ' search path to leaf was: ', search_path)
-                #print('MCTS_obj ' + str(MCTS_object.identifier) + ' pas prediction: ', pas_matrix[i, :])
-                #print('MCTS_obj ' + str(MCTS_object.identifier) + ' pas prediction size: ', pas_matrix[i, :].size)
-                #print('MCTS_obj ' + str(MCTS_object.identifier) + ' v prediction: ', v_matrix[i])
-                #print('MCTS_obj ' + str(MCTS_object.identifier) + ' v prediction size: ', v_matrix[i].size)
-                #print('')
-                #END TESTING---------------------
-            
+                
                 #We only need to update the last state in search path if the search 
                 #ended on a leaf(and not a terminal node) 
+                
                 self.search_updateLeaf(MCTS_object)
                 i += 1
-            #TESTING-------------------
-            #else:
-                #search_path = []
-                #for j in range(len(MCTS_object.search_path)-1):
-                #    state = MCTS_object.search_path[j][0].col_indices
-                #    action = MCTS_object.search_path[j][1]
-                #    search_path.append((state,action))
-                #search_path.append(MCTS_object.search_path[-1].col_indices)
-                #print('')
-                #print('MCTS_object had search path which ended on terminal node')
-                #print('generated sparsity for this MCTS object is: ', MCTS_object.game_args.game_iter)
-                #print('original sparse vector x is: ', MCTS_object.game_args.sparse_vector)
-                #print('MCTS_obj ' + str(MCTS_object.identifier) + ' search path to leaf was: ', search_path)
-                #print('')
-            #--------------------------
+                
             #Note that for each MCTS_object, we need to update edge weights of 
             #search path no matter if we ended on a  terminal node or not during search
             self.search_updateTraversedEdges(MCTS_object)
-            
-            #TESTING-------------------
-            #print('')
-            #print('TREE STATISTICS AFTER UPDATING TRAVERSED EDGES:')
-            #print('MCTS_object identifier:', MCTS_object.identifier)
-            #print('MCTS_object.Qsa:', MCTS_object.Qsa.values())
-            #print('MCTS_object.Nsa:', MCTS_object.Nsa.values())
-            #print('MCTS_object.Ns:', MCTS_object.Ns.values())
-            #print('MCTS_object.Ps:', MCTS_object.Ps.values())
-            #print('MCTS_object.Es:', MCTS_object.Es.values())
-            #print('')
-            #END TESTING---------------
     
     
     def search_traversetoLeaf(self, MCTS_object, State):
@@ -159,7 +121,7 @@ class Threading_MCTS():
         #BASE CASES FOR TRAVERSE TO LEAF RECURSIVE SEARCH
         
         #1)Compute the terminal reward for state if not computed before
-        if s not in MCTS_object.Es:
+        if s not in MCTS_object.Es: # Note that MCTS_object.Es[s] not defined is NOT THE SAME as MCTS_object.Es[s] = 0
             MCTS_object.Es[s] = MCTS_object.game.getGameEnded(State, self.args, MCTS_object.game_args)
         
         #2)Check if the current state we are on is terminal or not. If terminal, 
@@ -168,7 +130,8 @@ class Threading_MCTS():
             MCTS_object.search_path.append(State)
             
             return
-        #3)We are now at a leaf
+            
+        #3)Check if we are at leaf by checking if MCTS_object.Ps[s] is well defined
         if s not in MCTS_object.Ps:
             #Compute the features of the leaf
             State.compute_x_S_and_res(self.args, MCTS_object.game_args)
@@ -178,8 +141,8 @@ class Threading_MCTS():
             MCTS_object.search_path.append(State)
             return 
         
-        
-        #RECURSIVE CASE
+        #RECURSIVE CASE. If MCTS_object.Es[s] == 0 and MCTS_object.Ps[s] is well defined, then we are not yet at a leaf, so
+        #we continue the search. 
         valids = MCTS_object.Vs[s] #retrieve numpy vector of valid moves
         
         cur_best = -float('inf') #temp variable which holds the current highest UCB value
@@ -247,26 +210,107 @@ class Threading_MCTS():
     #MCTS_object.Nsa[(s,a)]
         
         #Propagate the true reward up search path if search path ended on a terminal node. Otherwise, propagate up the output of the neural network
+        #Note that v is a 1 by 1 np array, so hence the [0] at the end.
         if MCTS_object.Es[MCTS_object.search_path[-1].keyRep] == 0:
-            v = MCTS_object.batchquery_prediction[1]
-        else: #if last state visited in the MCTS simulation is a terminal node.
+            v = MCTS_object.batchquery_prediction[1][0]
+        else: #if last state visited in the MCTS simulation is a terminal node. 
             v = MCTS_object.Es[MCTS_object.search_path[-1].keyRep]
         
         
-        #Update weights of all edges in the search_path. Also increment node values. Note that the loop omits the last element because the last element is a state and not a pair. 
+        #Update weights of all edges in the search_path. Also increment node values. Note that the loop omits the last element because the last element is a state and not a pair.
         for (State, a) in MCTS_object.search_path[:-1]:
             #Note that State.keyRep should be well defined since every State in each (State, a) pair have had search_traversetoLeaf called on it,
             #which calls game.keyRepresentation
             s = State.keyRep
             if (s,a) in MCTS_object.Qsa:
+                #FOR TESTING----------------------
+                #print("")
+                #print('(s,a) IS IN MCTS_object.Qsa !!!!!!!!')
+                #print("MCTS_object.identifier:", MCTS_object.identifier)
+                #print("current_root:", MCTS_object.search_path[0][0].col_indices)
+                #print("(s, a):", State.col_indices, a)
+                #print("(s, a): ", s, a)
+                #print("State.inverse: ", State.inverse)
+                #print("State.ATy: ", State.ATy)
+                #Check that the State.inverse*State.ATy is indeed the solution matching np.linalg.lstsq
+                #if State.col_indices != []:
+                #    print("regression solution from product of inverse and ATy: ", np.matmul(State.inverse, State.ATy))
+                #    x = np.linalg.lstsq(MCTS_object.game_args.sensing_matrix[:, State.col_indices], MCTS_object.game_args.obs_vector)
+                #    print("regression solution and residual from np.linalg.lstsq: ", x[0], x[1])
+                #print("BEFORE updating Qsa, Nsa for (s,a) %%%%%%%%%")
+                #print("v:", v)
+                #print("MCTS_object.Qsa[(s,a)]:", MCTS_object.Qsa[(s,a)])
+                #print("MCTS_object.Nsa[(s,a)]:", MCTS_object.Nsa[(s,a)])
+                #END TESTING----------------------
+                
                 MCTS_object.Qsa[(s,a)] = (MCTS_object.Nsa[(s,a)]*MCTS_object.Qsa[(s,a)] + v)/(MCTS_object.Nsa[(s,a)]+1) #The v in this equation could be the true terminal reward OR the predicted reward from NN, depending on whether the search ended on a leaf which is also a terminal node. 
                 MCTS_object.Nsa[(s,a)] += 1
+                
+                #FOR TESTING----------------------
+                #print("AFTER updating Qsa, Nsa for (s,a) %%%%%%%%%")
+                #print("v:", v)
+                #print("MCTS_object.Qsa[(s,a)]:", MCTS_object.Qsa[(s,a)])
+                #print("MCTS_object.Nsa[(s,a)]:", MCTS_object.Nsa[(s,a)])
+                #print("Other Statistics.....")
+                #print("MCTS_object.Ps[s]:", MCTS_object.Ps[s])
+                #print("")
+                #END TESTING----------------------
+                
 
             else: #if (s,a) is not in dictionary MCTS_object.Qsa, that means (s,a) has never been visited before. These are edges connected to leaves!! IOW N(s,a) = 0. Hence, by the formula 3 lines above, MCTS_object.Qsa[(s,a)] = v.
+                #FOR TESTING----------------------
+                #print("")
+                #print('(s,a) NOT IN MCTS_object.Qsa !!!!!!!!')
+                #print("MCTS_object.identifier:", MCTS_object.identifier)
+                #print("current_root:", MCTS_object.search_path[0][0].col_indices)
+                #print("(s, a): ", State.col_indices, a)
+                #print("(s, a): ", s, a)
+                #print("State.inverse: ", State.inverse)
+                #print("State.ATy: ", State.ATy)
+                #Check that the State.inverse*State.ATy is indeed the solution matching np.linalg.lstsq
+                #if State.col_indices != []:
+                #    print("regression solution from product of inverse and ATy: ", np.matmul(State.inverse, State.ATy))
+                #    x = np.linalg.lstsq(MCTS_object.game_args.sensing_matrix[:, State.col_indices], MCTS_object.game_args.obs_vector)
+                #    print("regression solution and residual from np.linalg.lstsq: ", x[0], x[1])
+                #END TESTING----------------------
+                
                 MCTS_object.Qsa[(s,a)] = v 
                 MCTS_object.Nsa[(s,a)] = 1
+                
+                #FOR TESTING----------------------
+                #print("AFTER updating Qsa, Nsa for (s,a) %%%%%%%%%")
+                #print("v:", v)
+                #print("MCTS_object.Qsa[(s,a)]:", MCTS_object.Qsa[(s,a)])
+                #print("MCTS_object.Nsa[(s,a)]:", MCTS_object.Nsa[(s,a)])
+                #print("Other Statistics.....")
+                #print("MCTS_object.Ps[s]:", MCTS_object.Ps[s])
+                #END TESTING----------------------
         
             MCTS_object.Ns[s] += 1
+        
+        #FOR TESTING--------------------------
+        #last_state = MCTS_object.search_path[-1]
+        #print('')
+        #print('last state col indices: ', last_state.col_indices)
+        #print('last state action indices: ', last_state.action_indices)
+        #last_state_key = last_state.keyRep
+        #print('last state key rep: ', last_state_key)
+        #print("State.inverse: ", last_state.inverse)
+        #print("State.ATy: ", last_state.ATy)
+        #Check that the last_state.inverse*last_state.ATy is indeed the solution matching np.linalg.lstsq
+        #if last_state.col_indices != []:
+        #    print("regression solution from product of inverse and ATy: ", np.matmul(last_state.inverse, last_state.ATy))
+        #    x = np.linalg.lstsq(MCTS_object.game_args.sensing_matrix[:, last_state.col_indices], MCTS_object.game_args.obs_vector)
+        #    print("regression solution and residual from np.linalg.lstsq: ", x[0], x[1])
+        #print('The termreward currently stored for the last state is: ', last_state.termreward)
+        #last_state.computeTermReward(MCTS_object.args, MCTS_object.game_args)
+        #if last_state_key in MCTS_object.Ps:
+        #    print('last state updated Ps[s]: ', MCTS_object.Ps[last_state_key])
+        #print('')
+        #print('Generated vector y is: ', MCTS_object.game_args.obs_vector)
+        #print('')
+        #print('------------------------------------------------------------')
+        #END TESTING--------------------------
   
     
  

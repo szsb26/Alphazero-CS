@@ -16,7 +16,7 @@ class Coach():
     This class executes the self-play + learning. It uses the functions defined
     in Game and NeuralNet. args are specified in main.py.  Game_args specified in Game_Args.py
     """
-    def __init__(self, game, nnet, args, game_args, skip_nnet = None):
+    def __init__(self, game, nnet, args, game_args):
         self.args = args
         self.game_args = game_args #Game_args object contains information about matrix A and observed vector y. THIS SINGLE GAME ARGS IS USED FOR GENERATING THE A AND y FOR SELF PLAY GAMES!!! ONLY. 
         self.arena_game_args = Game_args() #object used to generate instances of A and y across all arenas objects in learn
@@ -25,89 +25,11 @@ class Coach():
         # the competitor network. SZ: Our competitor network is just another network which plays the same game as another network 
         # and we compare which network picks the sparsest vector. The network which picks the sparsest vector is chosen and we remember these weights.
         self.pnet = self.nnet.__class__(self.args)  #past neural network. self.nnet is a NNetWrapper object, and self.pnet = self.nnet.__class__(self.args) instantiates another instance of the NNetWrapper object with self.args as input. self.pnet and self.nnet are not pointing to the same thing.                              
-        self.skip_nnet = skip_nnet
+        #self.skip_nnet = skip_nnet
         self.parallel = Parallel(self.args, self.nnet) #initialize parallelization object for parllel search.
         self.threaded_mcts = Threading_MCTS(self.args, self.nnet)
-        self.mcts = MCTS(self.game, self.nnet, self.args, self.game_args, self.skip_nnet) #only used in executeEpisode
         self.trainExamplesHistory = []    # history of examples from args.numItersForTrainExamplesHistory latest iterations
         self.skipFirstSelfPlay = False # can be overriden in loadTrainExamples()
-        
-        
-    def executeEpisode(self): 
-    #executeEpisode(self) plays a single game self-play game using MCTS search
-    #For parallel_search, this function will not be used!!!!
-    #This method is only used for testing!!
-        
-        state = self.game.getInitBoard(self.args, self.game_args) #State Object
-        states = [] #will convert all states into X using NNet.convertStates
-        state_stringRep = self.game.stringRepresentation(state)
-        
-        #After episodeStep number of played moves into a single game (>= tempTHreshold), MCTS.getActionProb
-        #starts returning deterministic policies pi. Hence, the action chosen to get the next state
-        #for our root node will be deterministic. The higher the integer tempThreshold is,
-        #the more randomness introduced in generating our training samples before move tempThreshold.
-        
-        episodeStep = 0
-        
-        while True: #construct a list of states objects, where each state has state.p_as, state.z, and state.feature_dic updated. These are needed for conversion into training samples in NNetWrapper.constructTraining
-            episodeStep += 1
-            temp = int(episodeStep < self.args['tempThreshold']) #int(True) = 1, o.w. 0
-            #Note that MCTS.getActionProb runs a fixed number of MCTS.search determined by 
-            #args['numMCTSSims']
-
-            pi = self.mcts.getActionProb(state, temp=temp)
-            
-            state.pi_as = pi #update the label pi_as since getActionProb does not do this. THIS IS NOT THE OUTPUT OF NN!!
-            #Construct the States_List and Y. Append the state we are at into the states list. 
-            states.append(state)
-            #choose a random action (integer) with prob in pi. Note that pi is either a vector of 0 and 1s or a probability distribution. This depends on temp
-            #np.random.choice(len(pi), p=pi) generates an integer in {0,...,len(pi)-1} according to distribution p
-            action = np.random.choice(len(pi), p=pi)
-            #Given the randomly generated action, move the root node to the next state.   
-            
-            #NEW_CODE_HIERARCHICAL-----------------------------------------
-            next_s = self.game.getNextState(state, action, self.game_args, 1)
-            
-            #if length of column indices is greater than maxTreeDepth, reassign next_s to the state in Rsa instead. Otherwise, keep next_s
-            if len(next_s.col_indices) > self.args['maxTreeDepth']:
-                next_s = self.mcts.Rsa[(state_stringRep, action)] #These states are new and not the state objects created in MCTS search. We cant access those private variables, but we can access
-            
-            #for a in self.mcts.Rsa[(state_stringRep,action)]:
-                #next_s = self.game.getNextState(next_s, a, self.game_args, 0)
-            
-            state = next_s #reassign state
-            state_stringRep = self.game.stringRepresentation(state) #needed to access dictionary self.mcts.Es
-            #END_NEW-------------------------------------------------------
-            
-            #every dictionary in MCTS by transforming the state into its string representation.
-            r = self.mcts.Es[state_stringRep]
-            #return breaks out of the while loop, and we only break if we are on a state which returns nonzero reward.
-            # If r not equal to 0, that means the state we are on is a terminal state,
-            #which implies we should propagate the rewards up to every state in states
-
-            
-            if r!=0:
-                states.append(state) #append the last state with nonzero reward. Note that pi_as of the last terminal state is a vector of zeros. Refer to the default constructor of the State object
-                #FOR TESTING-------------------------------------------------
-                #print('The reward label for every state is: ', r)
-                #END TESTING-------------------------------------------------
-                for state in states:
-                    #compute state.feature_dic
-                    state.compute_x_S_and_res(self.args, self.game_args)
-                    #compute the label state.z
-                    state.z = r
-                    #print('The reward label for every state is: ', r)
-                    #FOR TESTING----------------------------------------------------------
-                    #print('STATE INFO:')
-                    #print('state.col: ' + str(state.col_indices))
-                    #print('state.feature_dic: ' + str(state.feature_dic))
-                    #print('state.pi_as: ' + str(state.pi_as))
-                    #print('state.reward: ' + str(state.z))
-                    #END TESTING----------------------------------------------------------
-                
-                trainExamples = states 
-                return trainExamples #returns a list of state objects with features, labels all computed
-    
     
     def advanceEpisodes(self, MCTS_States_list, Threaded_MCTS):
     #plays a single move for every game/episode in MCTS_States_list
@@ -123,25 +45,18 @@ class Coach():
         
         #using the returned actionProbs, make the next move for every episode in MCTS_States_list. IOW, for every pair (MCTS_object, States_list) in
         #MCTS_States_list, we append a new State to States_list.
-        for actionProb, pair in zip(actionProbs, MCTS_States_list):
-            #Note that pair = (MCTS object, [list of States]), ep[1][-1] is the last state object
-            temp_MCTS = pair[0]
-            temp_statesList = pair[1]
-            
-            #get the hashkey of the last state in temp_statesList. Note that any node we used traversetoLeaf on already has state.keyRep computed
-            temp_statekeyRep = temp_statesList[-1].keyRep
+        for actionProb, (temp_MCTS, temp_statesList) in zip(actionProbs, MCTS_States_list):
             
             #store the probability label and features, which were computed from the MCTS
             temp_statesList[-1].pi_as = actionProb
             
-            action = np.random.choice(len(actionProb), p = actionProb)
+            if len(temp_statesList)-1 < self.args['tempThreshold']: 
+                action = np.random.choice(len(actionProb), p = actionProb)
+            else:
+                action = np.argmax(actionProb)
             
             #Get the next state
             next_s = temp_MCTS.game.getNextState(temp_statesList[-1], action, temp_MCTS.game_args, 1)
-            
-            #if length of column indices is greater than maxTreeDepth, reassign next_s to the state in Rsa instead. Otherwise, keep next_s
-            #if len(next_s.col_indices) > self.args['maxTreeDepth'] and next_s.action_indices[-1] == 0:
-                #next_s = temp_MCTS.Rsa[(temp_statekeyRep, action)]
             
             #Note that because we never applied traversetoLeaf on next_s, we need to call game.keyRepresentation
             nexts_keyRep = temp_MCTS.game.keyRepresentation(next_s)
@@ -158,7 +73,8 @@ class Coach():
                 #to have feature_dic, r, defined so they are ready to be fed into Neural Network. 
                 #make sure every state in temp_statesList has feature_dic(feature inputs), r, and pi_as(labels) defined.
                 for state in temp_statesList:
-                    #set the label to the terminal reward. Note that pi_as label should all be defined already
+                    #set the label to the terminal reward. Note that pi_as label should all be defined already due to above.
+                    #pi_as label is only not defined for the terminal state
                     state.z = r
                     #set the feature dic, x_S and Atres. 
                     state_key = self.game.keyRepresentation(state)
@@ -178,6 +94,7 @@ class Coach():
                 #print('--------------------------------------------------')
                 #print('Completed Game: ', temp_MCTS.identifier )
                 #print('The generated sparse vector x for training is: ', temp_MCTS.game_args.sparse_vector)
+                #print('The observed vector y is: ', temp_MCTS.game_args.obs_vector)
                 #print('Printing statistics for new training states:')
                 #for state in temp_statesList:
                 #    print('')
@@ -195,8 +112,8 @@ class Coach():
                 
                 trainExamples += temp_statesList
             
-            #If r == 0, then we append temp_MCTS and temp_statesList into new_MCTS_States_list so search can continue
-            #on these pairs
+            #If r == 0, then we append temp_MCTS and temp_statesList into new_MCTS_States_list
+            #because the "game" is not finished yet and search continue on this pair. 
             else:
                 new_MCTS_States_list.append([temp_MCTS, temp_statesList])
         
@@ -250,7 +167,7 @@ class Coach():
                             temp_game_args.sensing_matrix = self.game_args.sensing_matrix
                         temp_game_args.generateNewObsVec(self.args['x_type'], self.args['sparsity'])
                         #Initialize MCTS and the first state for each MCTS
-                        temp_MCTS = MCTS(self.game, self.nnet, self.args, temp_game_args, self.skip_nnet, identifier = int(str(j) + str(ep)))
+                        temp_MCTS = MCTS(self.game, self.nnet, self.args, temp_game_args, identifier = int(str(j) + str(ep))) 
                         temp_init_state = self.game.getInitBoard(self.args, temp_game_args, identifier = int(str(j) + str(ep)))
                         #Append to MCTS_States_list
                         MCTS_States_list.append([temp_MCTS, [temp_init_state]])
@@ -261,7 +178,7 @@ class Coach():
                     total_completed_eps = 0
                 
                     #Initialize Threading Class. Needed to call threaded_mcts below. 
-                    threaded_mcts = Threading_MCTS(self.args, self.nnet, self.skip_nnet)
+                    threaded_mcts = Threading_MCTS(self.args, self.nnet)
                     #----------------------------------------------------------
                         
                     #While MCTS_States_list is nonempty, advance each episode in MCTS_States_list by one move.
@@ -279,6 +196,7 @@ class Coach():
                         #save the States_list states whose last arrived node is a terminal node. These will be used as new training samples.
                         batchTrainExamples += trainExamples
                         
+                        #for bookkeeping bar in the output of algorithm
                         if len(MCTS_States_list) < current_MCTSStateslist_size:
                             completed_episodes = current_MCTSStateslist_size - len(MCTS_States_list)
                             current_MCTSStateslist_size = len(MCTS_States_list)
@@ -349,8 +267,12 @@ class Coach():
                 trainExamples = self.nnet.constructTraining(trainExamples)
                 
                 #FOR TESTING-----------------------------------------------------
-                #print('trainExamples feature arrays: ' + str(trainExamples[0]))
-                #print('trainExamples label arrays: ' + str(trainExamples[1]))
+                #print('')
+                #print('feature arrays shape: ', trainExamples[0][0].shape, trainExamples[0][1].shape)
+                #print('trainExamples feature arrays: ', trainExamples[0])
+                #print('')
+                #print('label arrays shape: ', trainExamples[1][0].shape, trainExamples[1][1].shape)
+                #print('trainExamples label arrays: ', trainExamples[1])
                 #END TESTING-----------------------------------------------------
                     
                 self.nnet.train(trainExamples[0], trainExamples[1], folder = self.args['network_checkpoint'], filename = 'trainHistDict' + str(i-1))    
