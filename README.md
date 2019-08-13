@@ -1,7 +1,7 @@
 # Reinforcement Learning for Compressed Sensing
 
 # Introduction
-The code in this repository contains a single GPU implementation of Alphazero for solving the Classic Compressed Sensing Problem. Given a fixed(or unfixed) matrix A of size m by n, m<<n, , and an observed vector y = Ax, where x is an unknown k-sparse vector, Alphazero attempts to iteratively pick the k support locations of x. 
+The code in this repository contains a single GPU implementation of Google Deepmind's Alphazero for solving the Classic Compressed Sensing Problem. Given a fixed(or unfixed) matrix A of size m by n, m<<n, , and an observed vector y = Ax, where x is an unknown k-sparse vector, Alphazero attempts to iteratively pick the k support locations of x. 
 # File Structure
 "alphazero_compressedsensing_nonoise_hierarchical" and "alphazero_compressedsensing_nonoise_hierarchical_v2" are the current most stable versions. The difference between these two is that v2(the second file) contains functionality for hierarchical learning and code for manipulating the Monte Carlo Tree during training. 
 
