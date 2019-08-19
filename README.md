@@ -35,4 +35,4 @@ The second plot is the same as plot 1, except it is performed on the 15 by 50 ma
 The code here is specialized and engineered towards solving the compressed sensing problem. For a generalized alphazero algorithm which is applicable to any type of problem, please refer to https://github.com/suragnair/alpha-zero-general.
 
 # Contact
-If there are any questions, please email me at sichen.zhong@stonybrook.edu
+If there are any questions, please email me at szhong26@gmail.com
